@@ -16,6 +16,16 @@ export default defineConfig({
           utils: ['lucide-react', 'html-entities']
         }
       }
+    },
+    target: 'es2015',
+    minify: 'terser'
+  },
+  resolve: {
+    alias: {
+      '@': '/src'
     }
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'lucide-react']
   }
 });
