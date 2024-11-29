@@ -3,7 +3,7 @@ import { logger } from '../../utils/logger';
 interface DiagnosticResult {
   success: boolean;
   stage: string;
-  response?: any;
+  response?: unknown;
   error?: string;
   headers?: Record<string, string>;
 }
