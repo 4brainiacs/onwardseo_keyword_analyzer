@@ -1,0 +1,42 @@
+import type { KeywordAnalysis } from '../types';
+
+interface KeywordTableProps {
+  keywords: KeywordAnalysis[];
+  title: string;
+}
+
+export function KeywordTable({ keywords, title }: KeywordTableProps) {
+  return (
+    <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keyword</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Count</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Density</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prominence</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {keywords.map((item, index) => (
+              <tr key={index}>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{item.keyword}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.count}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {(item.density * 100).toFixed(2)}%
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {(item.prominence * 100).toFixed(2)}%
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
