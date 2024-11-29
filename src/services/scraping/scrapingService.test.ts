@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { ScrapingService } from '../../services/scraping/scrapingService';
-import { mockHtmlContent } from '../mocks/content';
+import { ScrapingService } from './scrapingService';
+import { mockHtmlContent } from '../../__tests__/mocks/content';
 
 describe('ScrapingService', () => {
   let scrapingService: ScrapingService;
@@ -35,14 +35,14 @@ describe('ScrapingService', () => {
   });
 
   it('should handle API key validation', async () => {
-    const originalEnv = import.meta.env.VITE_SCRAPINGBEE_API_KEY;
-    vi.stubGlobal('import.meta.env.VITE_SCRAPINGBEE_API_KEY', '');
+    const originalEnv = process.env.VITE_SCRAPINGBEE_API_KEY;
+    process.env.VITE_SCRAPINGBEE_API_KEY = '';
 
     await expect(scrapingService.scrapeWebpage('https://example.com'))
       .rejects
       .toThrow('ScrapingBee API key is missing');
 
-    vi.stubGlobal('import.meta.env.VITE_SCRAPINGBEE_API_KEY', originalEnv);
+    process.env.VITE_SCRAPINGBEE_API_KEY = originalEnv;
   });
 
   it('should handle rate limiting', async () => {

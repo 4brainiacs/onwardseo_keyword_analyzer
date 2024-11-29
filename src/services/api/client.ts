@@ -1,9 +1,9 @@
-import { ApiResponse } from './types';
+import type { ApiResponse } from './types';
 import { AnalysisError } from '../errors';
 import { logger } from '../../utils/logger';
-import { ResponseValidator } from './responseValidator';
+import { ResponseValidator } from './validators/responseValidator';
 
-export async function fetchApi<T>(
+export async function fetchApi<T extends object>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
@@ -17,17 +17,16 @@ export async function fetchApi<T>(
       },
     });
 
-    // Validate response headers and status
     ResponseValidator.validateContentType(response);
     ResponseValidator.validateStatus(response);
 
-    // Parse and validate response body
-    const data = await ResponseValidator.validateResponseBody(response);
+    const apiResponse = await ResponseValidator.validateResponseBody<ApiResponse<T>>(response);
 
-    // Additional validation for ScrapingBee response
-    ResponseValidator.validateScrapingBeeResponse(data);
+    if (!apiResponse.success || !apiResponse.data) {
+      throw new AnalysisError('Invalid response format', 500);
+    }
 
-    return data.data;
+    return apiResponse.data;
   } catch (error) {
     if (error instanceof AnalysisError) {
       throw error;

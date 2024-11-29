@@ -1,4 +1,3 @@
-import { logger } from '../../../utils/logger';
 import { ScrapingError } from '../types';
 
 export class ContentValidator {

@@ -1,18 +1,18 @@
 import { logger } from '../../utils/logger';
-import { ScrapingConfig, ScrapingResponse, ScrapingError, ScrapingBeeResponse } from './types';
+import { ScrapingConfig, ScrapingError } from './types';
 import { RetryService } from '../retry/RetryService';
 import { validateUrl } from '../../utils/urlValidator';
 import { RequestBuilder } from './requestBuilder';
 import { ResponseValidator } from './validators/responseValidator';
 import { ErrorHandler } from './errorHandler';
-import { environment } from '../../config/environment';
+import { env } from '../../config/environment';
 
 export class ScrapingService {
   private config: ScrapingConfig;
-  private retryService: RetryService;
-  private requestBuilder: RequestBuilder;
-  private responseValidator: ResponseValidator;
-  private errorHandler: ErrorHandler;
+  private readonly retryService: RetryService;
+  private readonly requestBuilder: RequestBuilder;
+  private readonly responseValidator: ResponseValidator;
+  private readonly errorHandler: ErrorHandler;
 
   constructor() {
     this.config = {
@@ -33,21 +33,25 @@ export class ScrapingService {
     });
 
     this.requestBuilder = new RequestBuilder(this.config);
-    this.responseValidator = new ResponseValidator(this.config.maxContentSize);
+    this.responseValidator = new ResponseValidator();
     this.errorHandler = new ErrorHandler();
   }
 
   async scrapeWebpage(url: string): Promise<string> {
     try {
+      if (!env.scrapingBee.apiKey) {
+        throw new Error('ScrapingBee API key is missing');
+      }
+
       const urlValidation = validateUrl(url);
       if (!urlValidation.isValid) {
-        throw new ScrapingError(urlValidation.error || 'Invalid URL', 400, false);
+        throw new Error(urlValidation.error || 'Invalid URL');
       }
 
       logger.info('Starting webpage scraping', { url });
 
       const params = new URLSearchParams({
-        api_key: environment.scrapingBee.apiKey,
+        api_key: env.scrapingBee.apiKey,
         url: url,
         render_js: 'false',
         premium_proxy: 'true',
@@ -56,7 +60,7 @@ export class ScrapingService {
         country_code: 'us'
       });
 
-      const response = await fetch(`${environment.scrapingBee.baseUrl}?${params.toString()}`, {
+      const response = await fetch(`${env.scrapingBee.baseUrl}?${params.toString()}`, {
         method: 'GET',
         headers: this.config.headers
       });
@@ -82,12 +86,6 @@ export class ScrapingService {
     }
   }
 
-  private isValidHtml(content: string): boolean {
-    const cleaned = content.toLowerCase().trim();
-    return cleaned.includes('<html') || 
-           cleaned.includes('<!doctype html') || 
-           (cleaned.includes('<body') && cleaned.includes('</body>'));
-  }
 }
 
 export const scrapingService = new ScrapingService();

@@ -1,45 +1,37 @@
+import type { Classification } from './classification';
+import type { HeadingType, PageHeadings } from './headings';
+import type { KeywordAnalysis, AnalysisResult } from './analysis';
+
+// Re-export all types
+export type { Classification };
+export type { HeadingType, PageHeadings };
+export type { KeywordAnalysis, AnalysisResult };
+
 // API Response types
-export interface ApiResponse<T> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
-  data?: T;
+  data: T;
   error?: string;
   details?: string;
+  retryAfter?: number;
+  timestamp?: string;
+  requestId?: string;
 }
 
 export interface ApiError {
+  success: false;
   error: string;
+  message?: string;
   details?: string;
   status?: number;
+  retryAfter?: number;
+  code?: string;
+  timestamp?: string;
+  requestId?: string;
 }
 
 // Loading state type
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
-
-// Analysis types
-export interface KeywordAnalysis {
-  keyword: string;
-  count: number;
-  density: number;
-  prominence: number;
-}
-
-export interface PageHeadings {
-  h1: string[];
-  h2: string[];
-  h3: string[];
-  h4: string[];
-}
-
-export interface AnalysisResult {
-  title: string;
-  metaDescription?: string;
-  headings: PageHeadings;
-  totalWords: number;
-  twoWordPhrases: KeywordAnalysis[];
-  threeWordPhrases: KeywordAnalysis[];
-  fourWordPhrases: KeywordAnalysis[];
-  scrapedContent: string;
-}
 
 // Component prop types
 export interface AnalysisResultsProps {
@@ -57,6 +49,7 @@ export interface PageStructureProps {
   title: string;
   metaDescription?: string;
   headings: PageHeadings;
+  classification?: Classification;
 }
 
 export interface ScrapedContentProps {
@@ -68,5 +61,3 @@ export interface UrlInputProps {
   loadingState: LoadingState;
   error?: Error | null;
 }
-
-export type HeadingType = keyof PageHeadings;

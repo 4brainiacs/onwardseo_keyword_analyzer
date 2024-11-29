@@ -58,7 +58,7 @@ class Logger {
     }
     
     // Console output in development
-    if (import.meta.env.DEV) {
+    if (process.env.NODE_ENV === 'development') {
       const consoleMessage = `[${timestamp}] ${level}: ${message}`;
       switch (level) {
         case 'ERROR':

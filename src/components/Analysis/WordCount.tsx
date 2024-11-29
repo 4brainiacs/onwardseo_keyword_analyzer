@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText } from 'lucide-react';
 import { ExportButton } from './ExportButton';
 import { TopKeywords } from './TopKeywords';

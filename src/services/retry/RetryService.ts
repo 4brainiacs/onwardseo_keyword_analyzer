@@ -25,10 +25,10 @@ export class RetryService {
     operation: () => Promise<T>,
     context: string
   ): Promise<T> {
-    let attempt = 1;
-    let lastError: Error;
+    let lastError: Error = new Error('Operation failed');
+    let attempt = 0;
 
-    while (attempt <= this.config.maxAttempts) {
+    while (attempt < this.config.maxAttempts) {
       try {
         logger.info(`Attempt ${attempt} for ${context}`);
         return await this.executeWithTimeout(operation);

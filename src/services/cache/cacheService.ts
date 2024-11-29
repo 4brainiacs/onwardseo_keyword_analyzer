@@ -1,4 +1,4 @@
-import { logger } from '../utils/logger';
+import { logger } from '../../utils/logger';
 
 interface CacheOptions {
   ttl: number;
@@ -17,7 +17,7 @@ interface CacheEntry<T> {
 export class CacheService<T> {
   private cache: Map<string, CacheEntry<T>>;
   private options: CacheOptions;
-  private cleanupInterval: NodeJS.Timer;
+  private cleanupInterval: ReturnType<typeof setInterval>;
   private currentSize: number = 0;
 
   constructor(options: Partial<CacheOptions> = {}) {
@@ -29,7 +29,7 @@ export class CacheService<T> {
       maxMemoryUsage: options.maxMemoryUsage || 50 * 1024 * 1024 // 50MB default
     };
 
-    this.startCleanupInterval();
+    this.cleanupInterval = this.startCleanupInterval();
   }
 
   public set(key: string, value: T, ttl?: number): void {
@@ -99,8 +99,8 @@ export class CacheService<T> {
     this.currentSize = 0;
   }
 
-  private startCleanupInterval(): void {
-    this.cleanupInterval = setInterval(() => {
+  private startCleanupInterval(): ReturnType<typeof setInterval> {
+    return setInterval(() => {
       this.cleanup();
     }, this.options.cleanupInterval);
   }

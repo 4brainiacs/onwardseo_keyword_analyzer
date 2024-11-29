@@ -1,8 +1,9 @@
 import { KeywordExtractor } from './keywordExtractor';
 import { SemanticAnalyzer } from './semanticAnalyzer';
 import { ContentClassifier } from './contentClassifier';
+import type { AnalysisResult, KeywordAnalysis } from '../../types/analysis';
+import type { Classification } from '../../types/classification';
 import { CacheService } from '../cache/cacheService';
-import type { AnalysisResult, KeywordAnalysis } from '../../types';
 
 interface AnalysisOptions {
   useCache?: boolean;
@@ -10,7 +11,7 @@ interface AnalysisOptions {
   includeClassification?: boolean;
 }
 
-export class ContentAnalyzer {
+export class Analyzer {
   private keywordExtractor: KeywordExtractor;
   private semanticAnalyzer: SemanticAnalyzer;
   private contentClassifier: ContentClassifier;
@@ -26,7 +27,7 @@ export class ContentAnalyzer {
     });
   }
 
-  public async analyzeContent(
+  public async analyze(
     content: string,
     options: AnalysisOptions = {}
   ): Promise<AnalysisResult> {
@@ -37,49 +38,52 @@ export class ContentAnalyzer {
       if (cached) return cached;
     }
 
-    // Extract basic keywords
     const keywordsByLength = this.keywordExtractor.extractKeywords(content);
-
-    // Get context for semantic analysis
     const context = this.extractContext(content);
-
-    // Process each keyword set
     const processedKeywords = new Map<number, KeywordAnalysis[]>();
+
     keywordsByLength.forEach((keywords, length) => {
-      let processed = keywords;
+      let processed: KeywordAnalysis[] = keywords;
 
       if (options.includeSemantic) {
-        processed = this.semanticAnalyzer.analyzeKeywords(processed, context);
+        const combinedHeadings = [
+          ...context.headings.h1,
+          ...context.headings.h2,
+          ...context.headings.h3,
+          ...context.headings.h4
+        ].filter(Boolean);
+
+        processed = this.semanticAnalyzer.analyzeKeywords(processed, {
+          title: context.title,
+          headings: combinedHeadings,
+          metaDescription: context.metaDescription
+        });
       }
 
       processedKeywords.set(length, processed);
     });
 
-    // Create result
     const result: AnalysisResult = {
       title: context.title,
-      headings: {
-        h1: context.headings.filter(h => h.level === 1).map(h => h.text),
-        h2: context.headings.filter(h => h.level === 2).map(h => h.text),
-        h3: context.headings.filter(h => h.level === 3).map(h => h.text),
-        h4: context.headings.filter(h => h.level === 4).map(h => h.text)
-      },
+      metaDescription: context.metaDescription || '',
+      headings: context.headings,
       totalWords: content.split(/\s+/).length,
       twoWordPhrases: processedKeywords.get(2) || [],
       threeWordPhrases: processedKeywords.get(3) || [],
       fourWordPhrases: processedKeywords.get(4) || [],
-      scrapedContent: content
+      scrapedContent: content,
+      classification: undefined
     };
 
     if (options.includeClassification) {
       const allKeywords = Array.from(processedKeywords.values())
         .flat()
         .map(k => k.keyword);
-      
-      result.classification = this.contentClassifier.classifyContent(
+      const classification = this.contentClassifier.classifyContent(
         content,
         allKeywords
-      );
+      ) as Classification;
+      result.classification = classification;
     }
 
     if (options.useCache) {
@@ -94,22 +98,32 @@ export class ContentAnalyzer {
   }
 
   private extractContext(content: string) {
-    // Simple context extraction - could be improved with proper HTML parsing
     const lines = content.split('\n');
     const title = lines.find(l => l.includes('<title>'))?.replace(/<\/?title>/g, '') || '';
-    const headings = lines
+    const headings = {
+      h1: [] as string[],
+      h2: [] as string[],
+      h3: [] as string[],
+      h4: [] as string[]
+    };
+
+    lines
       .filter(l => /<h[1-4][^>]*>/.test(l))
-      .map(l => {
+      .forEach((l: string) => {
         const level = parseInt(l.match(/<h([1-4])/)?.[1] || '0');
         const text = l.replace(/<[^>]+>/g, '').trim();
-        return { level, text };
+        switch (level) {
+          case 1: headings.h1.push(text); break;
+          case 2: headings.h2.push(text); break;
+          case 3: headings.h3.push(text); break;
+          case 4: headings.h4.push(text); break;
+        }
       });
 
     return {
       title,
       headings,
-      metaDescription: lines.find(l => l.includes('meta name="description"'))
-        ?.match(/content="([^"]+)"/)?.[1]
+      metaDescription: lines.find(l => l.includes('meta name="description"'))?.match(/content="([^"]+)"/)?.[1] || ''
     };
   }
 }

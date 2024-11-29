@@ -1,16 +1,10 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { ContentAnalyzer } from '../services/analyzer';
+import { describe, it, expect } from 'vitest';
+import { analyzeContent } from '../services/analyzer';
 import { mockHtmlContent } from './mocks/content';
 
-describe('ContentAnalyzer', () => {
-  let analyzer: ContentAnalyzer;
-
-  beforeEach(() => {
-    analyzer = new ContentAnalyzer();
-  });
-
+describe('analyzeContent', () => {
   it('should analyze content and return correct structure', async () => {
-    const result = await analyzer.analyzeContent(mockHtmlContent);
+    const result = analyzeContent(mockHtmlContent);
 
     expect(result).toHaveProperty('title');
     expect(result).toHaveProperty('headings');
@@ -22,7 +16,7 @@ describe('ContentAnalyzer', () => {
   });
 
   it('should extract correct number of phrases', async () => {
-    const result = await analyzer.analyzeContent(mockHtmlContent);
+    const result = analyzeContent(mockHtmlContent);
 
     expect(result.twoWordPhrases).toHaveLength(10);
     expect(result.threeWordPhrases).toHaveLength(10);
@@ -30,7 +24,7 @@ describe('ContentAnalyzer', () => {
   });
 
   it('should calculate keyword density correctly', async () => {
-    const result = await analyzer.analyzeContent(mockHtmlContent);
+    const result = analyzeContent(mockHtmlContent);
 
     result.twoWordPhrases.forEach(phrase => {
       expect(phrase.density).toBeGreaterThanOrEqual(0);
@@ -39,7 +33,7 @@ describe('ContentAnalyzer', () => {
   });
 
   it('should calculate prominence scores correctly', async () => {
-    const result = await analyzer.analyzeContent(mockHtmlContent);
+    const result = analyzeContent(mockHtmlContent);
 
     result.twoWordPhrases.forEach(phrase => {
       expect(phrase.prominence).toBeGreaterThanOrEqual(0);
@@ -48,13 +42,6 @@ describe('ContentAnalyzer', () => {
   });
 
   it('should handle empty content gracefully', async () => {
-    await expect(analyzer.analyzeContent('')).rejects.toThrow();
-  });
-
-  it('should cache results when useCache option is true', async () => {
-    const firstResult = await analyzer.analyzeContent(mockHtmlContent, { useCache: true });
-    const secondResult = await analyzer.analyzeContent(mockHtmlContent, { useCache: true });
-
-    expect(firstResult).toEqual(secondResult);
+    expect(() => analyzeContent('')).toThrow();
   });
 });

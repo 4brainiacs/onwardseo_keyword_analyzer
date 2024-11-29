@@ -20,6 +20,17 @@ export class ContentClassifier {
   public classifyContent(text: string, keywords: string[]): ClassificationResult {
     const scores = new Map<string, number>();
 
+    if (!text || !Array.isArray(keywords) || keywords.length === 0) {
+      return {
+        primaryCategory: {
+          name: 'Uncategorized',
+          confidence: 0,
+          keywords: []
+        },
+        secondaryCategories: [] as ContentCategory[]
+      };
+    }
+
     // Calculate scores for each category
     this.categories.forEach((categoryKeywords, category) => {
       const score = this.calculateCategoryScore(text, keywords, categoryKeywords);
@@ -33,11 +44,16 @@ export class ContentClassifier {
         confidence: score,
         keywords: this.getMatchingKeywords(keywords, this.categories.get(name) || new Set())
       }))
-      .sort((a, b) => b.confidence - a.confidence);
+      .sort((a, b) => b.confidence - a.confidence)
+      .filter(cat => cat.confidence > 0);
 
     return {
-      primaryCategory: sortedCategories[0],
-      secondaryCategories: sortedCategories.slice(1, 4)
+      primaryCategory: sortedCategories[0] || {
+        name: 'Uncategorized',
+        confidence: 0,
+        keywords: []
+      },
+      secondaryCategories: sortedCategories.slice(1, 4).filter(cat => cat.confidence > 0.1)
     };
   }
 

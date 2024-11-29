@@ -16,7 +16,7 @@ export class ResponseValidator {
     }
   }
 
-  static async validateResponseBody<T>(response: Response) {
+  static async validateResponseBody<T>(response: Response): Promise<T> {
     try {
       const data = await response.json();
       return data;

@@ -1,5 +1,6 @@
 import { AnalysisError } from '../errors';
 import { logger } from '../../utils/logger';
+import type { ApiResponse, ApiError } from './types';
 
 export class ResponseValidator {
   static validateContentType(response: Response): void {
@@ -50,7 +51,7 @@ export class ResponseValidator {
     }
   }
 
-  static async validateResponseBody(response: Response): Promise<any> {
+  static async validateResponseBody(response: Response): Promise<ApiResponse> {
     let text: string;
     
     try {
@@ -87,7 +88,7 @@ export class ResponseValidator {
     } catch (error) {
       logger.error('JSON parse error', { 
         error, 
-        responsePreview: text.substring(0, 200) 
+        responsePreview: text.slice(0, 200) 
       });
       
       throw new AnalysisError(
@@ -98,8 +99,8 @@ export class ResponseValidator {
     }
   }
 
-  static validateScrapingBeeResponse(data: any): void {
-    if (!data || typeof data !== 'object') {
+  static validateScrapingBeeResponse(data: unknown): void {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
       throw new AnalysisError(
         'Invalid response format',
         500,
@@ -107,17 +108,18 @@ export class ResponseValidator {
       );
     }
 
-    // Check for ScrapingBee error response
-    if (data.error) {
+    const response = data as Partial<ApiResponse>;
+    
+    if (response.error) {
       throw new AnalysisError(
-        data.error,
+        response.error,
         500,
-        data.message || 'ScrapingBee returned an error'
+        response.details || 'ScrapingBee returned an error'
       );
     }
 
     // Validate extracted content
-    if (!data.body || !Array.isArray(data.body)) {
+    if (!response.data) {
       throw new AnalysisError(
         'Missing content',
         500,

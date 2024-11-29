@@ -1,8 +1,9 @@
 import { beforeAll } from 'vitest';
-import { env } from '../../config/environment';
+import { validateEnvironment } from '../../config/validators';
 
 beforeAll(() => {
-  if (!env.scrapingBeeApiKey) {
+  const env = validateEnvironment();
+  if (!env.scrapingBee.apiKey) {
     throw new Error('VITE_SCRAPINGBEE_API_KEY environment variable is required for integration tests');
   }
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { PieChart } from 'lucide-react';
 import type { KeywordAnalysis } from '../../types';
 

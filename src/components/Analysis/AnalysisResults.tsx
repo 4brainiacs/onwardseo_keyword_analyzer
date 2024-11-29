@@ -1,18 +1,25 @@
 import React from 'react';
-import type { AnalysisResultsProps } from '../../types';
+import { WordCount } from './WordCount';
 import { PageStructure } from './PageStructure';
 import { KeywordTable } from './KeywordTable';
 import { ScrapedContent } from './ScrapedContent';
-import { WordCount } from './WordCount';
+import type { AnalysisResult } from '../../types/analysis';
 
-export function AnalysisResults({ result }: AnalysisResultsProps) {
-  if (!result) return null;
+export interface AnalysisResultsProps {
+  result: AnalysisResult;
+}
+
+export function AnalysisResults({ result }: AnalysisResultsProps): JSX.Element {
+  if (!result) {
+    return <div>No analysis results available</div>;
+  }
 
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <PageStructure 
           title={result.title} 
+          classification={result.classification}
           headings={result.headings}
           metaDescription={result.metaDescription} 
         />

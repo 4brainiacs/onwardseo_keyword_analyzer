@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config';
+import path from 'path';
 
 export default defineConfig({
   test: {
@@ -6,6 +7,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/__tests__/setup.ts'],
     testTimeout: 60000,
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

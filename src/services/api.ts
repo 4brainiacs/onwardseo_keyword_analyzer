@@ -92,7 +92,7 @@ export async function fetchApi<T>(
       throw error;
     }
 
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       throw new AnalysisError(
         'Request timeout',
         408,

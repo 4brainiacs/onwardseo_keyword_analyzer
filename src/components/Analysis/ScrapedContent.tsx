@@ -1,5 +1,6 @@
-import React from 'react';
-import type { ScrapedContentProps } from '../../types';
+interface ScrapedContentProps {
+  content: string;
+}
 
 export function ScrapedContent({ content }: ScrapedContentProps) {
   const cleanContent = content

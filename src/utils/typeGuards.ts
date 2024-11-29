@@ -1,14 +1,17 @@
-import type { ApiResponse, ApiError, AnalysisResult, PageHeadings, KeywordAnalysis } from '../types';
+import type { 
+  AnalysisResult, 
+  PageHeadings, 
+  KeywordAnalysis
+} from '../types';
+import type { ApiError, ApiResponse } from '../services/api/types';
 
 export function isApiError(response: unknown): response is ApiError {
   if (!response || typeof response !== 'object') {
     return false;
   }
 
-  return (
-    'error' in response &&
-    typeof (response as ApiError).error === 'string'
-  );
+  const r = response as Partial<ApiError>;
+  return typeof r.error === 'string';
 }
 
 export function isAnalysisResult(result: unknown): result is AnalysisResult {

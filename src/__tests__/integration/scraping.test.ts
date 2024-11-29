@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { scrapingService } from '../../services/scraping/scrapingService';
-import { env } from '../../config/environment';
+import { validateEnvironment } from '../../config/validators';
 
 describe('ScrapingBee Integration', () => {
   beforeAll(() => {
-    if (!env.scrapingBeeApiKey) {
+    const env = validateEnvironment();
+    if (!env.scrapingBee.apiKey) {
       throw new Error('VITE_SCRAPINGBEE_API_KEY is required for integration tests');
     }
   });

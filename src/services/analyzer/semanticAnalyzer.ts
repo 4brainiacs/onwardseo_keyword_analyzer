@@ -1,6 +1,6 @@
 import { KeywordAnalysis } from '../../types';
 
-interface SemanticContext {
+export interface SemanticContext {
   title: string;
   headings: string[];
   metaDescription?: string;
@@ -28,17 +28,14 @@ export class SemanticAnalyzer {
   private calculateProminence(keyword: string, context: SemanticContext): number {
     const scores = {
       title: context.title.toLowerCase().includes(keyword) ? 2.0 : 0,
-      headings: context.headings.reduce((score, heading) => {
-        if (heading.toLowerCase().includes(keyword)) {
-          return score + 1.5;
-        }
-        return score;
+      headings: context.headings.reduce((score: number, heading: string) => {
+        return heading.toLowerCase().includes(keyword) ? score + 1.0 : score;
       }, 0),
       meta: context.metaDescription?.toLowerCase().includes(keyword) ? 1.0 : 0
     };
 
     const totalScore = scores.title + scores.headings + scores.meta;
-    const maxPossibleScore = 2.0 + (context.headings.length * 1.5) + 1.0;
+    const maxPossibleScore = 2.0 + context.headings.length + 1.0;
 
     return totalScore / maxPossibleScore;
   }

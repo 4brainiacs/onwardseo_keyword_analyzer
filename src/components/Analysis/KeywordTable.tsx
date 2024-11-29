@@ -1,5 +1,11 @@
-import React from 'react';
-import type { KeywordTableProps } from '../../types';
+import type { KeywordAnalysis, PageHeadings } from '../../types';
+
+interface KeywordTableProps {
+  keywords: KeywordAnalysis[];
+  title: string;
+  pageTitle: string;
+  headings: PageHeadings;
+}
 
 export function KeywordTable({ keywords, title, pageTitle, headings }: KeywordTableProps) {
   return (

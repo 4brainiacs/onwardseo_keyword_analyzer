@@ -36,14 +36,14 @@ export function useRetry<T>(
   };
 
   const execute = useCallback(async (): Promise<T> => {
-    setState(prev => ({ ...prev, isRetrying: false, error: null }));
+    setState((prevState: RetryState) => ({ ...prevState, isRetrying: false, error: null }));
 
     try {
       return await operation();
     } catch (error) {
       if (state.attempts >= maxAttempts) {
-        setState(prev => ({
-          ...prev,
+        setState((prevState: RetryState) => ({
+          ...prevState,
           error: error as Error,
           isRetrying: false,
         }));
