@@ -6,5 +6,5 @@ export interface ContentCategory {
 
 export interface Classification {
   primaryCategory: ContentCategory;
-  secondaryCategories?: ContentCategory[];
+  secondaryCategories: ContentCategory[];
 }
