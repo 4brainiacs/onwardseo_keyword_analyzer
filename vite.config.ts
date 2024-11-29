@@ -18,7 +18,12 @@ export default defineConfig({
       }
     },
     target: 'es2015',
-    minify: 'terser'
+    minify: 'terser',
+    assetsDir: 'assets',
+    cssCodeSplit: true,
+    modulePreload: {
+      polyfill: true
+    }
   },
   resolve: {
     alias: {

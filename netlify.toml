@@ -24,3 +24,6 @@
   pretty_urls = true
 [build.processing.images]
   compress = true
+
+[context.production]
+  environment = { NODE_ENV = "production" }
