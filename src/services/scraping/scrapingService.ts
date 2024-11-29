@@ -85,7 +85,6 @@ export class ScrapingService {
       throw this.errorHandler.handleError(error);
     }
   }
-
 }
 
 export const scrapingService = new ScrapingService();

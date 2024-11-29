@@ -21,10 +21,7 @@ export class Analyzer {
     this.keywordExtractor = new KeywordExtractor();
     this.semanticAnalyzer = new SemanticAnalyzer();
     this.contentClassifier = new ContentClassifier();
-    this.cache = new CacheService<AnalysisResult>({
-      ttl: 3600000, // 1 hour
-      maxSize: 100
-    });
+    this.cache = new CacheService<AnalysisResult>();
   }
 
   public async analyze(
@@ -109,7 +106,7 @@ export class Analyzer {
 
     lines
       .filter(l => /<h[1-4][^>]*>/.test(l))
-      .forEach((l: string) => {
+      .forEach(l => {
         const level = parseInt(l.match(/<h([1-4])/)?.[1] || '0');
         const text = l.replace(/<[^>]+>/g, '').trim();
         switch (level) {

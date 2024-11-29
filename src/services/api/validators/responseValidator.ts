@@ -19,7 +19,7 @@ export class ResponseValidator {
   static async validateResponseBody<T>(response: Response): Promise<T> {
     try {
       const data = await response.json();
-      return data;
+      return data as T;
     } catch (error) {
       logger.error('Response validation failed:', error);
       throw new AnalysisError('Invalid response format', 500);
