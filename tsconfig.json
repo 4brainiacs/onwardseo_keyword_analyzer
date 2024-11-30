@@ -22,16 +22,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
-    },
-    "types": [
-      "node",
-      "vite/client",
-      "@testing-library/jest-dom",
-      "vitest/globals",
-      "jsdom",
-      "dompurify"
-    ]
+    }
   },
-  "include": ["src", "netlify/functions"],
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.tsx", "src/__tests__"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
