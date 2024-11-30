@@ -1,5 +1,4 @@
-import { scrapingService } from './services/scraping';
-import { validateUrl } from './utils/validators';
+import fetch from 'node-fetch';
 
 export async function handler(event) {
   const headers = {
@@ -10,67 +9,70 @@ export async function handler(event) {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers
-    };
+    return { statusCode: 204, headers };
   }
 
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ 
-        success: false,
-        error: 'Method not allowed' 
-      })
+      body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
 
   try {
-    console.log('Received request body:', event.body);
     const { url } = JSON.parse(event.body || '{}');
+    console.log('Processing URL:', url);
 
     if (!url) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ 
-          success: false,
-          error: 'URL is required' 
-        })
+        body: JSON.stringify({ error: 'URL is required' })
       };
     }
 
-    const urlValidation = validateUrl(url);
-    if (!urlValidation.isValid) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          success: false,
-          error: urlValidation.error 
-        })
-      };
+    const apiKey = process.env.SCRAPINGBEE_API_KEY;
+    if (!apiKey) {
+      throw new Error('SCRAPINGBEE_API_KEY is not configured');
     }
 
-    console.log('Scraping URL:', url);
-    const html = await scrapingService.scrapeWebpage(url);
-    console.log('Scraping successful');
-    
+    const params = new URLSearchParams({
+      api_key: apiKey,
+      url: url,
+      render_js: 'false',
+      premium_proxy: 'true',
+      block_ads: 'true',
+      block_resources: 'true',
+      wait_browser: 'false',
+      timeout: '30000'
+    });
+
+    console.log('Fetching from ScrapingBee...');
+    const response = await fetch(`https://app.scrapingbee.com/api/v1?${params}`, {
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.5'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`ScrapingBee API error: ${response.status}`);
+    }
+
+    const html = await response.text();
+    console.log('ScrapingBee response received');
+
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        data: {
-          html
-        }
+        data: { html }
       })
     };
   } catch (error) {
     console.error('Scraping error:', error);
-
     return {
       statusCode: 500,
       headers,

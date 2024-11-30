@@ -1,5 +1,4 @@
 import { decode } from 'html-entities';
-import { fetchApi } from './api';
 import { logger } from '../utils/logger';
 
 export async function scrapeWebpage(url: string): Promise<string> {
@@ -7,13 +6,26 @@ export async function scrapeWebpage(url: string): Promise<string> {
     logger.info('Starting webpage scraping', { url });
     console.log('Scraping URL:', url);
     
-    const response = await fetchApi<{ html: string }>('/scrape', {
+    const response = await fetch('/.netlify/functions/scrape', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ url })
     });
-    
-    console.log('Scraping response received');
-    return decode(response.html);
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to scrape webpage');
+    }
+
+    const data = await response.json();
+    if (!data.success || !data.data?.html) {
+      throw new Error('Invalid response from scraping service');
+    }
+
+    console.log('Scraping successful');
+    return decode(data.data.html);
   } catch (error) {
     logger.error('Scraping failed', { error, url });
     throw error;
