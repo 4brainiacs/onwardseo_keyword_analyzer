@@ -22,7 +22,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/.netlify/functions': {
-        target: 'http://localhost:9999',
+        target: 'http://localhost:8888',
         changeOrigin: true,
         secure: false
       }
@@ -34,7 +34,6 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL)
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV)
   }
 });

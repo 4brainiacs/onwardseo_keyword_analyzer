@@ -24,20 +24,28 @@ export async function fetchApi<T>(
       clearTimeout(timeoutId);
       console.log('API Response Status:', response.status);
 
+      const text = await response.text();
+      console.log('Raw Response:', text);
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error('JSON Parse Error:', e);
+        throw new AnalysisError('Invalid JSON response', 500);
+      }
+
       if (!response.ok) {
-        const error = await response.json();
-        console.error('API Error:', error);
+        console.error('API Error:', data);
         throw new AnalysisError(
-          error.error || 'Request failed',
+          data.error || 'Request failed',
           response.status,
-          error.details || `Server returned status ${response.status}`
+          data.details || `Server returned status ${response.status}`
         );
       }
 
-      const data = await response.json();
-      console.log('API Response:', data);
-      
       if (!data || !data.success) {
+        console.error('Invalid Response Format:', data);
         throw new AnalysisError(
           'Invalid response format',
           500,
@@ -45,6 +53,7 @@ export async function fetchApi<T>(
         );
       }
 
+      console.log('API Response Data:', data);
       return data.data;
     } finally {
       clearTimeout(timeoutId);
