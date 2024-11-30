@@ -14,20 +14,27 @@ export async function scrapeWebpage(url: string): Promise<string> {
       body: JSON.stringify({ url })
     });
 
+    console.log('Response status:', response.status);
+    const data = await response.text();
+    console.log('Raw response:', data);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'Failed to scrape webpage');
+      throw new Error(data || 'Failed to scrape webpage');
     }
 
-    const data = await response.json();
-    if (!data.success || !data.data?.html) {
-      throw new Error('Invalid response from scraping service');
+    try {
+      const jsonData = JSON.parse(data);
+      if (!jsonData.success || !jsonData.data?.html) {
+        throw new Error('Invalid response from scraping service');
+      }
+      console.log('Scraping successful');
+      return decode(jsonData.data.html);
+    } catch (e) {
+      console.error('JSON parse error:', e);
+      throw new Error('Invalid response format from scraping service');
     }
-
-    console.log('Scraping successful');
-    return decode(data.data.html);
   } catch (error) {
-    logger.error('Scraping failed', { error, url });
+    console.error('Scraping failed:', error);
     throw error;
   }
 }

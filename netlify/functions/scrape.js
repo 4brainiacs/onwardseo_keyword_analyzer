@@ -34,6 +34,7 @@ export async function handler(event) {
 
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
     if (!apiKey) {
+      console.error('SCRAPINGBEE_API_KEY is not configured');
       throw new Error('SCRAPINGBEE_API_KEY is not configured');
     }
 
@@ -56,12 +57,13 @@ export async function handler(event) {
       }
     });
 
+    console.log('ScrapingBee status:', response.status);
+    const html = await response.text();
+    console.log('ScrapingBee response length:', html.length);
+
     if (!response.ok) {
       throw new Error(`ScrapingBee API error: ${response.status}`);
     }
-
-    const html = await response.text();
-    console.log('ScrapingBee response received');
 
     return {
       statusCode: 200,
