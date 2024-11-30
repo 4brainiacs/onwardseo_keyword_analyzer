@@ -1,6 +1,11 @@
-import fetch from 'node-fetch';
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
-export async function handler(event) {
+exports.handler = async function(event) {
+  console.log('Scrape function invoked', { 
+    httpMethod: event.httpMethod,
+    headers: event.headers 
+  });
+
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -9,10 +14,12 @@ export async function handler(event) {
   };
 
   if (event.httpMethod === 'OPTIONS') {
+    console.log('Handling OPTIONS request');
     return { statusCode: 204, headers };
   }
 
   if (event.httpMethod !== 'POST') {
+    console.log('Invalid method:', event.httpMethod);
     return {
       statusCode: 405,
       headers,
@@ -25,6 +32,7 @@ export async function handler(event) {
     console.log('Processing URL:', url);
 
     if (!url) {
+      console.log('Missing URL parameter');
       return {
         statusCode: 400,
         headers,
@@ -57,14 +65,16 @@ export async function handler(event) {
       }
     });
 
-    console.log('ScrapingBee status:', response.status);
+    console.log('ScrapingBee response status:', response.status);
     const html = await response.text();
     console.log('ScrapingBee response length:', html.length);
 
     if (!response.ok) {
+      console.error('ScrapingBee error:', response.status, html);
       throw new Error(`ScrapingBee API error: ${response.status}`);
     }
 
+    console.log('Successfully scraped webpage');
     return {
       statusCode: 200,
       headers,
@@ -74,7 +84,12 @@ export async function handler(event) {
       })
     };
   } catch (error) {
-    console.error('Scraping error:', error);
+    console.error('Scraping error:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    
     return {
       statusCode: 500,
       headers,
@@ -85,4 +100,4 @@ export async function handler(event) {
       })
     };
   }
-}
+};

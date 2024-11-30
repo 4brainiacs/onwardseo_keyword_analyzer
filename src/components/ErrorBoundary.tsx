@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface Props {
   children: ReactNode;
@@ -33,14 +34,19 @@ export class ErrorBoundary extends Component<Props, State> {
       retryCount: this.state.retryCount + 1
     });
 
-    console.error('Error caught by boundary:', {
-      error,
+    logger.error('React Error Boundary Caught Error:', {
+      error: {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      },
       componentStack: errorInfo.componentStack,
       retryCount: this.state.retryCount
     });
   }
 
   private handleReset = () => {
+    logger.info('Resetting error boundary');
     this.setState({
       hasError: false,
       error: null,

@@ -8,6 +8,7 @@ import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { scrapeWebpage } from './services/scraper';
 import { analyzeContent } from './services/analyzer';
+import { logger } from './utils/logger';
 import type { AnalysisResult } from './types';
 
 export default function App() {
@@ -17,19 +18,32 @@ export default function App() {
   const [isInputEnabled, setIsInputEnabled] = useState(true);
 
   const handleAnalyze = async (url: string) => {
+    logger.info('Starting analysis', { url });
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('Starting analysis for:', url);
+      logger.info('Fetching webpage content');
       const html = await scrapeWebpage(url);
-      console.log('Received HTML response');
+      
+      logger.info('Analyzing content');
       const analysisResult = analyzeContent(html);
-      console.log('Analysis completed');
+      
+      logger.info('Analysis complete', { 
+        wordCount: analysisResult.totalWords,
+        headings: Object.keys(analysisResult.headings).length
+      });
+      
       setResult(analysisResult);
       setIsInputEnabled(false);
     } catch (err: any) {
-      console.error('Analysis failed:', err);
+      logger.error('Analysis failed', { 
+        error: err,
+        url,
+        message: err.message,
+        stack: err.stack
+      });
+      
       setError({
         message: err.message || 'Analysis failed',
         details: err.details || 'An unexpected error occurred'
@@ -40,6 +54,7 @@ export default function App() {
   };
 
   const handleNewAnalysis = () => {
+    logger.info('Starting new analysis');
     setIsInputEnabled(true);
     setResult(null);
     setError(null);
