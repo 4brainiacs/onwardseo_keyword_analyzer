@@ -14,14 +14,6 @@ export const handler = async (event) => {
     return { statusCode: 204, headers };
   }
 
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
-  }
-
   try {
     const { url } = JSON.parse(event.body || '{}');
     logger.info('Processing URL:', url);
@@ -30,7 +22,10 @@ export const handler = async (event) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'URL is required' })
+        body: JSON.stringify({ 
+          success: false,
+          error: 'URL is required' 
+        })
       };
     }
 
@@ -39,7 +34,10 @@ export const handler = async (event) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: urlValidation.error })
+        body: JSON.stringify({ 
+          success: false,
+          error: urlValidation.error 
+        })
       };
     }
 

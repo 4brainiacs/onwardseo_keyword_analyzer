@@ -16,8 +16,33 @@ export const handler = async (event) => {
     return { statusCode: 204, headers };
   }
 
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers,
+      body: JSON.stringify({
+        success: false,
+        error: 'Method not allowed'
+      })
+    };
+  }
+
   try {
-    const { url } = JSON.parse(event.body || '{}');
+    let body;
+    try {
+      body = JSON.parse(event.body);
+    } catch (e) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Invalid JSON body'
+        })
+      };
+    }
+
+    const { url } = body;
     logger.info('Processing URL:', url);
 
     if (!url) {

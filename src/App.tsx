@@ -26,6 +26,10 @@ export default function App() {
       logger.info('Fetching webpage content');
       const html = await scrapeWebpage(url);
       
+      if (!html) {
+        throw new Error('Failed to fetch webpage content');
+      }
+
       logger.info('Analyzing content');
       const analysisResult = analyzeContent(html);
       
