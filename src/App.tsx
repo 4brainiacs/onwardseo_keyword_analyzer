@@ -21,11 +21,15 @@ export default function App() {
     setError(null);
     
     try {
+      console.log('Starting analysis for:', url);
       const html = await scrapeWebpage(url);
+      console.log('Received HTML response');
       const analysisResult = analyzeContent(html);
+      console.log('Analysis completed');
       setResult(analysisResult);
       setIsInputEnabled(false);
     } catch (err: any) {
+      console.error('Analysis failed:', err);
       setError({
         message: err.message || 'Analysis failed',
         details: err.details || 'An unexpected error occurred'
