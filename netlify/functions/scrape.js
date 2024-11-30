@@ -1,6 +1,5 @@
 import { scrapingService } from './services/scraping';
 import { validateUrl } from './utils/validators';
-import { analyzeContent } from './services/analyzer';
 
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') {
@@ -40,7 +39,6 @@ export async function handler(event) {
     }
 
     const html = await scrapingService.scrapeWebpage(url);
-    const analysis = analyzeContent(html);
     
     return {
       statusCode: 200,
@@ -50,11 +48,11 @@ export async function handler(event) {
       },
       body: JSON.stringify({
         success: true,
-        data: analysis
+        data: html
       })
     };
   } catch (error) {
-    console.error('Analysis error:', error);
+    console.error('Scraping error:', error);
 
     return {
       statusCode: 500,
@@ -64,7 +62,7 @@ export async function handler(event) {
       },
       body: JSON.stringify({
         success: false,
-        error: 'Failed to analyze webpage',
+        error: 'Failed to scrape webpage',
         details: error.message
       })
     };
