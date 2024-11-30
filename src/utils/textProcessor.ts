@@ -1,14 +1,14 @@
 import { JSDOM } from 'jsdom';
-import createDOMPurify from 'dompurify';
+import DOMPurify from 'dompurify';
 import { encode } from 'html-entities';
 
 export class TextProcessor {
   private dom: JSDOM;
-  private DOMPurify: any;
+  private purifier: ReturnType<typeof DOMPurify>;
 
   constructor() {
     this.dom = new JSDOM('');
-    this.DOMPurify = createDOMPurify(this.dom.window as any);
+    this.purifier = DOMPurify(this.dom.window as unknown as Window);
   }
 
   public process(html: string): {
@@ -27,11 +27,12 @@ export class TextProcessor {
     try {
       // First pass: Basic HTML cleaning
       const sanitizeStart = performance.now();
-      const sanitized = this.DOMPurify.sanitize(html, {
+      const sanitized = this.purifier.sanitize(html, {
         ALLOWED_TAGS: ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'span', 'div'],
         ALLOWED_ATTR: [],
         RETURN_DOM: true
       });
+
       const sanitizeTime = performance.now() - sanitizeStart;
 
       // Extract text content
@@ -56,26 +57,30 @@ export class TextProcessor {
     } catch (error) {
       console.error('Text processing error:', error);
       throw new Error('Failed to process text content');
-    } finally {
-      // Clean up to prevent memory leaks
-      this.cleanup();
     }
   }
 
-  private extractText(dom: Document): string {
-    const walker = document.createTreeWalker(
-      dom,
-      NodeFilter.SHOW_TEXT,
-      null
-    );
-
-    let text = '';
-    let node;
-    while (node = walker.nextNode()) {
-      text += node.textContent + ' ';
+  private extractText(dom: Document | Node | string): string {
+    if (typeof dom === 'string') {
+      return dom;
     }
 
-    return text;
+    if (dom instanceof Document) {
+      const walker = dom.createTreeWalker(
+        dom,
+        NodeFilter.SHOW_TEXT,
+        null
+      );
+
+      let text = '';
+      let node: Node | null;
+      while ((node = walker.nextNode())) {
+        text += node.textContent + ' ';
+      }
+      return text;
+    }
+
+    return dom.textContent || '';
   }
 
   private cleanText(text: string): string {
@@ -99,12 +104,5 @@ export class TextProcessor {
       .split(/\s+/)
       .filter(word => word.length > 0)
       .length;
-  }
-
-  private cleanup(): void {
-    // Clean up JSDOM instance
-    if (this.dom) {
-      this.dom.window.close();
-    }
   }
 }

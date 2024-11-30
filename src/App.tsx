@@ -4,11 +4,11 @@ import { AnalysisResults } from './components/Analysis/AnalysisResults';
 import { ErrorDisplay } from './components/Analysis/ErrorDisplay';
 import { CalculationExamples } from './components/Analysis/CalculationExamples';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import type { AnalysisResult } from './types';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { scrapeWebpage } from './services/scraper';
 import { analyzeContent } from './services/analyzer';
+import type { AnalysisResult } from './types';
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(false);
@@ -37,13 +37,16 @@ export default function App() {
 
   const handleNewAnalysis = () => {
     setIsInputEnabled(true);
+    setResult(null);
+    setError(null);
   };
 
   return (
     <ErrorBoundary>
       <div className="min-h-screen bg-gray-100 flex flex-col">
         <Header />
-        <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <main className="flex-grow container mx-auto px-4 py-8">
           <div className="space-y-8">
             <UrlInput 
               onAnalyze={handleAnalyze} 
@@ -68,6 +71,7 @@ export default function App() {
             )}
           </div>
         </main>
+
         <Footer />
       </div>
     </ErrorBoundary>
