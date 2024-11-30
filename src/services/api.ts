@@ -6,6 +6,7 @@ export async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<T> {
   try {
+    console.log('Fetching API:', endpoint);
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -21,9 +22,11 @@ export async function fetchApi<T>(
       });
 
       clearTimeout(timeoutId);
+      console.log('API Response Status:', response.status);
 
       if (!response.ok) {
         const error = await response.json();
+        console.error('API Error:', error);
         throw new AnalysisError(
           error.error || 'Request failed',
           response.status,
@@ -32,6 +35,7 @@ export async function fetchApi<T>(
       }
 
       const data = await response.json();
+      console.log('API Response:', data);
       
       if (!data || !data.success) {
         throw new AnalysisError(
@@ -46,6 +50,7 @@ export async function fetchApi<T>(
       clearTimeout(timeoutId);
     }
   } catch (error) {
+    console.error('API Error:', error);
     if (error instanceof AnalysisError) {
       throw error;
     }

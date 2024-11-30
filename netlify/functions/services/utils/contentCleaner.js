@@ -1,3 +1,4 @@
+import cheerio from 'cheerio';
 import { CONTENT_PATTERNS } from './patterns';
 
 export function cleanContent(html) {
