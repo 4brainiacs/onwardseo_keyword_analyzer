@@ -63,7 +63,9 @@ export async function handler(event) {
       headers,
       body: JSON.stringify({
         success: true,
-        data: html
+        data: {
+          html
+        }
       })
     };
   } catch (error) {

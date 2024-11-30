@@ -6,12 +6,14 @@ export async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<T> {
   try {
-    console.log('Fetching API:', endpoint);
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    console.log('Fetching API:', `${baseUrl}${endpoint}`);
+    
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const response = await fetch(`/.netlify/functions${endpoint}`, {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
         ...options,
         signal: controller.signal,
         headers: {
