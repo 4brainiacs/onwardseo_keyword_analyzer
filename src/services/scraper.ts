@@ -1,10 +1,10 @@
-import { decode } from 'html-entities';
 import { logger } from '../utils/logger';
 import { AnalysisError } from './errors';
+import type { AnalysisResult } from '../types';
 
-export async function scrapeWebpage(url: string): Promise<string> {
+export async function scrapeWebpage(url: string): Promise<AnalysisResult> {
   try {
-    logger.info('Starting webpage scraping', { url });
+    logger.info('Starting webpage analysis', { url });
     
     const response = await fetch('/.netlify/functions/analyze', {
       method: 'POST',
@@ -14,22 +14,35 @@ export async function scrapeWebpage(url: string): Promise<string> {
       body: JSON.stringify({ url })
     });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new AnalysisError(
-        error.error || 'Failed to scrape webpage',
-        response.status,
-        error.details
-      );
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new AnalysisError('Invalid response type from server', 500);
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (e) {
+      throw new AnalysisError('Invalid JSON response from server', 500);
+    }
+
+    if (!response.ok) {
+      throw new AnalysisError(
+        data.error || 'Failed to analyze webpage',
+        response.status,
+        data.details
+      );
+    }
     
     if (!data?.success || !data?.data) {
       throw new AnalysisError('Invalid response from analysis service', 500);
     }
 
-    logger.info('Analysis successful');
+    logger.info('Analysis successful', {
+      wordCount: data.data.totalWords,
+      title: data.data.title
+    });
+
     return data.data;
   } catch (error) {
     logger.error('Analysis failed:', error);

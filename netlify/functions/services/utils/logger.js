@@ -1,20 +1,48 @@
-class Logger {
+export class Logger {
   info(message, data = {}) {
-    console.log(`[INFO] ${message}`, data);
+    this.log('INFO', message, data);
   }
 
   error(message, data = {}) {
-    console.error(`[ERROR] ${message}`, data);
+    this.log('ERROR', message, data);
   }
 
   warn(message, data = {}) {
-    console.warn(`[WARN] ${message}`, data);
+    this.log('WARN', message, data);
   }
 
   debug(message, data = {}) {
     if (process.env.NODE_ENV === 'development') {
-      console.debug(`[DEBUG] ${message}`, data);
+      this.log('DEBUG', message, data);
     }
+  }
+
+  private log(level, message, data) {
+    const timestamp = new Date().toISOString();
+    const logData = {
+      timestamp,
+      level,
+      message,
+      ...this.sanitizeData(data)
+    };
+
+    // Always log to console for Netlify logging
+    console.log(JSON.stringify(logData));
+  }
+
+  private sanitizeData(data) {
+    if (!data) return {};
+
+    const sanitized = { ...data };
+    const sensitiveKeys = ['api_key', 'key', 'token', 'password', 'secret'];
+
+    Object.keys(sanitized).forEach(key => {
+      if (sensitiveKeys.some(k => key.toLowerCase().includes(k))) {
+        sanitized[key] = '[REDACTED]';
+      }
+    });
+
+    return sanitized;
   }
 }
 

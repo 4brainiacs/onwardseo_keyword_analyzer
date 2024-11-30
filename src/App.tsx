@@ -7,7 +7,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { scrapeWebpage } from './services/scraper';
-import { analyzeContent } from './services/analyzer';
 import { logger } from './utils/logger';
 import type { AnalysisResult } from './types';
 
@@ -23,16 +22,7 @@ export default function App() {
     setError(null);
     
     try {
-      logger.info('Fetching webpage content');
-      const html = await scrapeWebpage(url);
-      
-      if (!html) {
-        throw new Error('Failed to fetch webpage content');
-      }
-
-      logger.info('Analyzing content');
-      const analysisResult = analyzeContent(html);
-      
+      const analysisResult = await scrapeWebpage(url);
       logger.info('Analysis complete', { 
         wordCount: analysisResult.totalWords,
         headings: Object.keys(analysisResult.headings).length
