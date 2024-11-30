@@ -7,7 +7,30 @@ interface KeywordTableProps {
   headings: PageHeadings;
 }
 
-export function KeywordTable({ keywords, title, pageTitle, headings }: KeywordTableProps) {
+export function KeywordTable({ keywords, title, pageTitle, headings }: KeywordTableProps): JSX.Element {
+  const getTagIndicators = (keyword: string): string[] => {
+    const indicators: string[] = [];
+    const lowerKeyword = keyword.toLowerCase();
+
+    if (pageTitle?.toLowerCase().includes(lowerKeyword)) {
+      indicators.push('T');
+    }
+    if (headings.h1?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
+      indicators.push('H1');
+    }
+    if (headings.h2?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
+      indicators.push('H2');
+    }
+    if (headings.h3?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
+      indicators.push('H3');
+    }
+    if (headings.h4?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
+      indicators.push('H4');
+    }
+
+    return indicators;
+  };
+
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
@@ -33,7 +56,7 @@ export function KeywordTable({ keywords, title, pageTitle, headings }: KeywordTa
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {keywords.map((item, index) => {
-              const indicators = getTagIndicators(item.keyword, pageTitle, headings);
+              const indicators = getTagIndicators(item.keyword);
               return (
                 <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -61,31 +84,4 @@ export function KeywordTable({ keywords, title, pageTitle, headings }: KeywordTa
       </div>
     </div>
   );
-}
-
-function getTagIndicators(
-  keyword: string,
-  pageTitle: string,
-  headings: { h1: string[], h2: string[], h3: string[], h4: string[] }
-): string[] {
-  const indicators: string[] = [];
-  const lowerKeyword = keyword.toLowerCase();
-
-  if (pageTitle?.toLowerCase().includes(lowerKeyword)) {
-    indicators.push('T');
-  }
-  if (headings.h1?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
-    indicators.push('H1');
-  }
-  if (headings.h2?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
-    indicators.push('H2');
-  }
-  if (headings.h3?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
-    indicators.push('H3');
-  }
-  if (headings.h4?.some(h => h?.toLowerCase().includes(lowerKeyword))) {
-    indicators.push('H4');
-  }
-
-  return indicators;
 }

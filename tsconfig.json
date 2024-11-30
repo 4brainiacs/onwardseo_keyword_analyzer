@@ -23,8 +23,15 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["vitest/globals", "@testing-library/jest-dom"]
+    "types": [
+      "node",
+      "vite/client",
+      "@testing-library/jest-dom",
+      "vitest/globals",
+      "jsdom",
+      "dompurify"
+    ]
   },
-  "include": ["src"],
+  "include": ["src", "netlify/functions"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

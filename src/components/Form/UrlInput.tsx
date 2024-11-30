@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { Search, AlertCircle } from 'lucide-react';
 
 interface UrlInputProps {
@@ -8,8 +8,8 @@ interface UrlInputProps {
   onNewAnalysis: () => void;
 }
 
-export function UrlInput({ onAnalyze, isLoading, isEnabled, onNewAnalysis }: UrlInputProps) {
-  const [url, setUrl] = useState('');
+export function UrlInput({ onAnalyze, isLoading, isEnabled, onNewAnalysis }: UrlInputProps): JSX.Element {
+  const [url, setUrl] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   const validateUrl = (url: string): boolean => {
@@ -21,7 +21,7 @@ export function UrlInput({ onAnalyze, isLoading, isEnabled, onNewAnalysis }: Url
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     const trimmedUrl = url.trim();
