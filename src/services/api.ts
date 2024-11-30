@@ -6,7 +6,7 @@ export async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<T> {
   try {
-    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const baseUrl = '/.netlify/functions';
     console.log('Fetching API:', `${baseUrl}${endpoint}`);
     
     const controller = new AbortController();
