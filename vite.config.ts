@@ -25,7 +25,19 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true
+    host: true,
+    strictPort: true,
+    open: true,
+    cors: true,
+    headers: {
+      'Access-Control-Allow-Origin': '*'
+    }
+  },
+  preview: {
+    port: 4173,
+    host: true,
+    strictPort: true,
+    open: true
   },
   resolve: {
     alias: {
