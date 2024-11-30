@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import cheerio from 'cheerio';
+import { validateUrl } from './utils/validators.js';
 import { analyzeContent } from './services/analyzer/index.js';
 import { logger } from './services/utils/logger.js';
 
@@ -15,14 +16,6 @@ export const handler = async (event) => {
     return { statusCode: 204, headers };
   }
 
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' })
-    };
-  }
-
   try {
     const { url } = JSON.parse(event.body || '{}');
     logger.info('Processing URL:', url);
@@ -31,7 +24,22 @@ export const handler = async (event) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'URL is required' })
+        body: JSON.stringify({ 
+          success: false,
+          error: 'URL is required' 
+        })
+      };
+    }
+
+    const urlValidation = validateUrl(url);
+    if (!urlValidation.isValid) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ 
+          success: false,
+          error: urlValidation.error 
+        })
       };
     }
 
@@ -46,20 +54,28 @@ export const handler = async (event) => {
       render_js: 'false',
       premium_proxy: 'true',
       block_ads: 'true',
-      block_resources: 'true'
+      block_resources: 'true',
+      wait_browser: 'false',
+      timeout: '30000'
     });
 
     logger.info('Fetching webpage content');
-    const response = await fetch(`https://app.scrapingbee.com/api/v1?${params}`);
+    const response = await fetch(`https://app.scrapingbee.com/api/v1?${params}`, {
+      headers: {
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.5'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`ScrapingBee API error: ${response.status}`);
     }
 
     const html = await response.text();
+    logger.info('Analyzing content');
+
     const result = analyzeContent(html);
 
-    logger.info('Analysis complete');
     return {
       statusCode: 200,
       headers,

@@ -7,7 +7,7 @@ export async function fetchApi<T>(
   options: RequestInit = {}
 ): Promise<T> {
   try {
-    const baseUrl = import.meta.env.PROD ? '/.netlify/functions' : '/api';
+    const baseUrl = '/.netlify/functions';
     logger.info('Fetching API:', `${baseUrl}${endpoint}`);
     
     const controller = new AbortController();

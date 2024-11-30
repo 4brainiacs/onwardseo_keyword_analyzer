@@ -17,10 +17,13 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["cheerio", "node-fetch"]
+  external_node_modules = ["cheerio"]
 
 [dev]
   framework = "vite"
   targetPort = 5173
   port = 8888
   publish = "dist"
+
+[[plugins]]
+  package = "@netlify/plugin-functions-install-core"

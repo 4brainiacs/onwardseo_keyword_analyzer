@@ -1,9 +1,8 @@
 import fetch from 'node-fetch';
+import { validateUrl } from './utils/validators.js';
 import { logger } from './services/utils/logger.js';
 
 export const handler = async (event) => {
-  logger.info('Scrape function invoked', { httpMethod: event.httpMethod });
-
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -32,6 +31,15 @@ export const handler = async (event) => {
         statusCode: 400,
         headers,
         body: JSON.stringify({ error: 'URL is required' })
+      };
+    }
+
+    const urlValidation = validateUrl(url);
+    if (!urlValidation.isValid) {
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: urlValidation.error })
       };
     }
 
