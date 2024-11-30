@@ -1,7 +1,9 @@
-const cheerio = require('cheerio');
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+import fetch from 'node-fetch';
+import cheerio from 'cheerio';
+import { analyzeContent } from './services/analyzer/index.js';
+import { logger } from './services/utils/logger.js';
 
-exports.handler = async function(event) {
+export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -23,6 +25,7 @@ exports.handler = async function(event) {
 
   try {
     const { url } = JSON.parse(event.body || '{}');
+    logger.info('Processing URL:', url);
 
     if (!url) {
       return {
@@ -46,42 +49,27 @@ exports.handler = async function(event) {
       block_resources: 'true'
     });
 
+    logger.info('Fetching webpage content');
     const response = await fetch(`https://app.scrapingbee.com/api/v1?${params}`);
-    const html = await response.text();
-
+    
     if (!response.ok) {
       throw new Error(`ScrapingBee API error: ${response.status}`);
     }
 
-    const $ = cheerio.load(html);
-    
-    // Remove unwanted elements
-    $('script, style, noscript, iframe, svg').remove();
+    const html = await response.text();
+    const result = analyzeContent(html);
 
-    const title = $('title').text().trim();
-    const h1s = $('h1').map((_, el) => $(el).text().trim()).get();
-    const h2s = $('h2').map((_, el) => $(el).text().trim()).get();
-    const h3s = $('h3').map((_, el) => $(el).text().trim()).get();
-    const h4s = $('h4').map((_, el) => $(el).text().trim()).get();
-
-    const textContent = $('body').text().trim();
-    const words = textContent.toLowerCase().split(/\s+/).filter(Boolean);
-
+    logger.info('Analysis complete');
     return {
       statusCode: 200,
       headers,
       body: JSON.stringify({
         success: true,
-        data: {
-          title,
-          headings: { h1: h1s, h2: h2s, h3: h3s, h4: h4s },
-          totalWords: words.length,
-          scrapedContent: textContent
-        }
+        data: result
       })
     };
   } catch (error) {
-    console.error('Analysis error:', error);
+    logger.error('Analysis error:', error);
     return {
       statusCode: 500,
       headers,

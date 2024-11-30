@@ -1,13 +1,14 @@
 import { AnalysisError } from './errors';
 import type { ApiResponse } from './api/types';
+import { logger } from '../utils/logger';
 
 export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   try {
-    const baseUrl = '/.netlify/functions';
-    console.log('Fetching API:', `${baseUrl}${endpoint}`);
+    const baseUrl = import.meta.env.PROD ? '/.netlify/functions' : '/api';
+    logger.info('Fetching API:', `${baseUrl}${endpoint}`);
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -24,21 +25,21 @@ export async function fetchApi<T>(
       });
 
       clearTimeout(timeoutId);
-      console.log('API Response Status:', response.status);
+      logger.info('API Response Status:', response.status);
 
       const text = await response.text();
-      console.log('Raw Response:', text);
+      logger.debug('Raw Response:', text);
 
       let data;
       try {
         data = JSON.parse(text);
       } catch (e) {
-        console.error('JSON Parse Error:', e);
+        logger.error('JSON Parse Error:', e);
         throw new AnalysisError('Invalid JSON response', 500);
       }
 
       if (!response.ok) {
-        console.error('API Error:', data);
+        logger.error('API Error:', data);
         throw new AnalysisError(
           data.error || 'Request failed',
           response.status,
@@ -47,7 +48,7 @@ export async function fetchApi<T>(
       }
 
       if (!data || !data.success) {
-        console.error('Invalid Response Format:', data);
+        logger.error('Invalid Response Format:', data);
         throw new AnalysisError(
           'Invalid response format',
           500,
@@ -55,13 +56,13 @@ export async function fetchApi<T>(
         );
       }
 
-      console.log('API Response Data:', data);
+      logger.info('API Response Data:', data);
       return data.data;
     } finally {
       clearTimeout(timeoutId);
     }
   } catch (error) {
-    console.error('API Error:', error);
+    logger.error('API Error:', error);
     if (error instanceof AnalysisError) {
       throw error;
     }

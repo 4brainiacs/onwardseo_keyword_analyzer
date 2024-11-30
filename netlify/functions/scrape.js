@@ -1,10 +1,8 @@
-const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+import fetch from 'node-fetch';
+import { logger } from './services/utils/logger.js';
 
-exports.handler = async function(event) {
-  console.log('Scrape function invoked', { 
-    httpMethod: event.httpMethod,
-    headers: event.headers 
-  });
+export const handler = async (event) => {
+  logger.info('Scrape function invoked', { httpMethod: event.httpMethod });
 
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -14,12 +12,10 @@ exports.handler = async function(event) {
   };
 
   if (event.httpMethod === 'OPTIONS') {
-    console.log('Handling OPTIONS request');
     return { statusCode: 204, headers };
   }
 
   if (event.httpMethod !== 'POST') {
-    console.log('Invalid method:', event.httpMethod);
     return {
       statusCode: 405,
       headers,
@@ -29,10 +25,9 @@ exports.handler = async function(event) {
 
   try {
     const { url } = JSON.parse(event.body || '{}');
-    console.log('Processing URL:', url);
+    logger.info('Processing URL:', url);
 
     if (!url) {
-      console.log('Missing URL parameter');
       return {
         statusCode: 400,
         headers,
@@ -42,7 +37,6 @@ exports.handler = async function(event) {
 
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
     if (!apiKey) {
-      console.error('SCRAPINGBEE_API_KEY is not configured');
       throw new Error('SCRAPINGBEE_API_KEY is not configured');
     }
 
@@ -57,7 +51,7 @@ exports.handler = async function(event) {
       timeout: '30000'
     });
 
-    console.log('Fetching from ScrapingBee...');
+    logger.info('Fetching from ScrapingBee');
     const response = await fetch(`https://app.scrapingbee.com/api/v1?${params}`, {
       headers: {
         'Accept': 'text/html,application/xhtml+xml',
@@ -65,16 +59,13 @@ exports.handler = async function(event) {
       }
     });
 
-    console.log('ScrapingBee response status:', response.status);
-    const html = await response.text();
-    console.log('ScrapingBee response length:', html.length);
-
     if (!response.ok) {
-      console.error('ScrapingBee error:', response.status, html);
       throw new Error(`ScrapingBee API error: ${response.status}`);
     }
 
-    console.log('Successfully scraped webpage');
+    const html = await response.text();
+    logger.info('Successfully scraped webpage');
+
     return {
       statusCode: 200,
       headers,
@@ -84,12 +75,7 @@ exports.handler = async function(event) {
       })
     };
   } catch (error) {
-    console.error('Scraping error:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
-    });
-    
+    logger.error('Scraping error:', error);
     return {
       statusCode: 500,
       headers,
