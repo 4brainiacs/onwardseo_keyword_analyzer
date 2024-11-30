@@ -5,12 +5,6 @@ import type { AnalysisResult, KeywordAnalysis } from '../../types/analysis';
 import type { Classification } from '../../types/classification';
 import { CacheService } from '../cache/cacheService';
 
-interface AnalysisOptions {
-  useCache?: boolean;
-  includeSemantic?: boolean;
-  includeClassification?: boolean;
-}
-
 export class Analyzer {
   private keywordExtractor: KeywordExtractor;
   private semanticAnalyzer: SemanticAnalyzer;
@@ -26,7 +20,7 @@ export class Analyzer {
 
   public async analyze(
     content: string,
-    options: AnalysisOptions = {}
+    options: { useCache?: boolean; includeSemantic?: boolean; includeClassification?: boolean } = {}
   ): Promise<AnalysisResult> {
     const cacheKey = this.generateCacheKey(content);
 
