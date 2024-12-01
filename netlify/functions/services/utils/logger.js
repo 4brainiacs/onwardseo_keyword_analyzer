@@ -1,4 +1,4 @@
-export class Logger {
+class Logger {
   info(message, data = {}) {
     this.log('INFO', message, data);
   }
@@ -17,7 +17,7 @@ export class Logger {
     }
   }
 
-  private log(level, message, data) {
+  log(level, message, data) {
     const timestamp = new Date().toISOString();
     const logData = {
       timestamp,
@@ -26,11 +26,10 @@ export class Logger {
       ...this.sanitizeData(data)
     };
 
-    // Always log to console for Netlify logging
     console.log(JSON.stringify(logData));
   }
 
-  private sanitizeData(data) {
+  sanitizeData(data) {
     if (!data) return {};
 
     const sanitized = { ...data };

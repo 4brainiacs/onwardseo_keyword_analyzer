@@ -14,26 +14,16 @@ export async function scrapeWebpage(url: string): Promise<AnalysisResult> {
       body: JSON.stringify({ url })
     });
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.includes('application/json')) {
-      throw new AnalysisError('Invalid response type from server', 500);
-    }
-
-    let data;
-    try {
-      data = await response.json();
-    } catch (e) {
-      throw new AnalysisError('Invalid JSON response from server', 500);
-    }
+    const data = await response.json();
 
     if (!response.ok) {
       throw new AnalysisError(
         data.error || 'Failed to analyze webpage',
         response.status,
-        data.details
+        data.details || 'Server error'
       );
     }
-    
+
     if (!data?.success || !data?.data) {
       throw new AnalysisError('Invalid response from analysis service', 500);
     }

@@ -12,12 +12,8 @@ const headers = {
 };
 
 export const handler = async (event) => {
-  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    return { 
-      statusCode: 204, 
-      headers 
-    };
+    return { statusCode: 204, headers };
   }
 
   if (event.httpMethod !== 'POST') {
@@ -32,22 +28,8 @@ export const handler = async (event) => {
   }
 
   try {
-    let body;
-    try {
-      body = JSON.parse(event.body || '{}');
-    } catch (e) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'Invalid request body'
-        })
-      };
-    }
-
-    const { url } = body;
-    logger.info('Processing URL:', url);
+    const { url } = JSON.parse(event.body || '{}');
+    logger.info('Analyzing URL:', url);
 
     if (!url) {
       return {
@@ -74,15 +56,7 @@ export const handler = async (event) => {
 
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
     if (!apiKey) {
-      logger.error('Missing API key');
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'Service configuration error'
-        })
-      };
+      throw new Error('SCRAPINGBEE_API_KEY is not configured');
     }
 
     const params = new URLSearchParams({
@@ -96,7 +70,6 @@ export const handler = async (event) => {
       timeout: '30000'
     });
 
-    logger.info('Fetching from ScrapingBee');
     const response = await fetch(`https://app.scrapingbee.com/api/v1?${params}`, {
       headers: {
         'Accept': 'text/html,application/xhtml+xml',
@@ -105,38 +78,15 @@ export const handler = async (event) => {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('ScrapingBee API error:', { 
-        status: response.status, 
-        error: errorText 
-      });
-      
-      return {
-        statusCode: response.status,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'Failed to fetch webpage',
-          details: `API returned status ${response.status}`
-        })
-      };
+      throw new Error(`ScrapingBee API error: ${response.status}`);
     }
 
     const html = await response.text();
-    if (!html || !html.trim()) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: 'Empty response from webpage'
-        })
-      };
+    if (!html) {
+      throw new Error('Empty response from ScrapingBee');
     }
 
-    logger.info('Successfully scraped webpage');
     const result = analyzeContent(html);
-    logger.info('Analysis completed');
 
     return {
       statusCode: 200,
@@ -148,13 +98,12 @@ export const handler = async (event) => {
     };
   } catch (error) {
     logger.error('Analysis error:', error);
-    
     return {
       statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: 'Analysis failed',
+        error: 'Failed to analyze webpage',
         details: error.message
       })
     };
