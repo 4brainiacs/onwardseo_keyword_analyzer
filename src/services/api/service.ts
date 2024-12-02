@@ -1,5 +1,6 @@
 import type { ApiClient } from './client';
 import type { AnalysisResult } from '../../types';
+import { analysisResultSchema } from '../validation/schema';
 import { logger } from '../../utils/logger';
 
 export class ApiService {
@@ -9,10 +10,15 @@ export class ApiService {
     try {
       logger.info('Starting URL analysis', { url });
       
-      return await this.client.request<AnalysisResult>('/analyze', {
+      const response = await this.client.request<AnalysisResult>('/analyze', {
         method: 'POST',
         body: JSON.stringify({ url })
       });
+
+      // Validate response data
+      const validatedData = analysisResultSchema.parse(response);
+      
+      return validatedData;
     } catch (error) {
       logger.error('Analysis failed:', error);
       throw error;

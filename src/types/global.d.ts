@@ -2,9 +2,16 @@
 /// <reference types="vitest/globals" />
 /// <reference types="@testing-library/jest-dom" />
 
+interface Window {
+  __RUNTIME_CONFIG__?: {
+    VITE_API_URL: string;
+    NODE_ENV: string;
+  };
+}
+
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
-  readonly MODE: 'development' | 'production';
+  readonly MODE: 'development' | 'production' | 'test';
   readonly DEV: boolean;
   readonly PROD: boolean;
   readonly TEST: boolean;

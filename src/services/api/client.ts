@@ -1,7 +1,7 @@
+import { env } from '../../config/environment';
 import { ApiResponse, ApiError } from './types';
 import { logger } from '../../utils/logger';
 
-const BASE_URL = '/.netlify/functions';
 const DEFAULT_TIMEOUT = 30000;
 
 export class ApiClient {
@@ -14,7 +14,7 @@ export class ApiClient {
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${BASE_URL}${endpoint}`;
+    const url = `${env.api.baseUrl}${endpoint}`;
     const timeoutId = setTimeout(() => this.controller.abort(), this.timeout);
 
     try {

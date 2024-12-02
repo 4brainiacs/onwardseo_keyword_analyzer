@@ -9,6 +9,7 @@ import { Footer } from './components/Layout/Footer';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { useAnalysis } from './hooks/useAnalysis';
 import { logger } from './utils/logger';
+import { env } from './config/environment';
 
 export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -27,7 +28,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      if (!window.__RUNTIME_CONFIG__?.VITE_API_URL) {
+      if (!env.api.baseUrl) {
         throw new Error('Missing API configuration');
       }
       setIsInitialized(true);
