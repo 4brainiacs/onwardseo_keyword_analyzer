@@ -2,9 +2,10 @@ import { useState, useCallback } from 'react';
 import { ApiState, ApiStatus } from '../services/api/types';
 import { apiClient } from '../services/api/client';
 import { logger } from '../utils/logger';
+import type { AnalysisResult } from '../types';
 
 interface UseApiOptions {
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: AnalysisResult) => void;
   onError?: (error: Error) => void;
   timeout?: number;
 }
@@ -21,15 +22,15 @@ export function useApi(options: UseApiOptions = {}) {
     setState(prev => ({ ...prev, status }));
   };
 
-  const request = useCallback(async <T>(
+  const request = useCallback(async (
     endpoint: string,
     requestOptions: RequestInit = {}
-  ): Promise<T | null> => {
+  ): Promise<void> => {
     setStatus('loading');
     setState(prev => ({ ...prev, error: null }));
 
     try {
-      const data = await apiClient.request<T>(endpoint, {
+      const data = await apiClient.request<AnalysisResult>(endpoint, {
         ...requestOptions,
         headers: {
           'Content-Type': 'application/json',
@@ -38,27 +39,25 @@ export function useApi(options: UseApiOptions = {}) {
       });
 
       setState(prev => ({
-        ...prev,
         status: 'success',
         data,
-        error: null
+        error: null,
+        retryCount: prev.retryCount
       }));
 
       options.onSuccess?.(data);
-      return data;
     } catch (error) {
       logger.error('API request failed:', error);
 
       setState(prev => ({
-        ...prev,
         status: 'error',
         error: error as Error,
+        data: null,
         retryCount: prev.retryCount + 1,
         lastAttempt: new Date()
       }));
 
       options.onError?.(error as Error);
-      return null;
     }
   }, [options]);
 

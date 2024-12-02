@@ -11,7 +11,7 @@ export function isApiError(response: unknown): response is ApiError {
   }
 
   const r = response as Partial<ApiError>;
-  return typeof r.error === 'string';
+  return typeof r.message === 'string' && typeof r.code === 'string';
 }
 
 export function isAnalysisResult(result: unknown): result is AnalysisResult {
