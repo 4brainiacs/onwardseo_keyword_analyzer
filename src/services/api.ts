@@ -8,13 +8,15 @@ export async function fetchApi<T>(
 ): Promise<T> {
   try {
     const baseUrl = '/.netlify/functions';
-    logger.info('Fetching API:', `${baseUrl}${endpoint}`);
+    const url = `${baseUrl}${endpoint}`;
+    
+    logger.info('Fetching API:', url);
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
-      const response = await fetch(`${baseUrl}${endpoint}`, {
+      const response = await fetch(url, {
         ...options,
         signal: controller.signal,
         headers: {
@@ -27,27 +29,27 @@ export async function fetchApi<T>(
       clearTimeout(timeoutId);
       logger.info('API Response Status:', response.status);
 
-      const text = await response.text();
-      logger.debug('Raw Response:', text);
-
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        logger.error('JSON Parse Error:', e);
-        throw new AnalysisError('Invalid JSON response', 500);
-      }
-
       if (!response.ok) {
-        logger.error('API Error:', data);
+        const text = await response.text();
+        logger.error('API Error Response:', text);
+        
+        let errorData;
+        try {
+          errorData = JSON.parse(text);
+        } catch (e) {
+          throw new AnalysisError('Invalid server response', response.status);
+        }
+
         throw new AnalysisError(
-          data.error || 'Request failed',
+          errorData.error || 'Request failed',
           response.status,
-          data.details || `Server returned status ${response.status}`
+          errorData.details || `Server returned status ${response.status}`
         );
       }
 
-      if (!data || !data.success) {
+      const data = await response.json() as ApiResponse<T>;
+      
+      if (!data || !data.success || !data.data) {
         logger.error('Invalid Response Format:', data);
         throw new AnalysisError(
           'Invalid response format',
@@ -63,6 +65,7 @@ export async function fetchApi<T>(
     }
   } catch (error) {
     logger.error('API Error:', error);
+    
     if (error instanceof AnalysisError) {
       throw error;
     }
@@ -72,6 +75,14 @@ export async function fetchApi<T>(
         'Request timeout',
         408,
         'The request took too long to complete'
+      );
+    }
+
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new AnalysisError(
+        'Network error',
+        503,
+        'Unable to connect to the server. Please check your connection.'
       );
     }
 

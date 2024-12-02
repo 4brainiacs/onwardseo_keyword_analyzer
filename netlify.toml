@@ -7,13 +7,11 @@
   from = "/*"
   to = "/index.html"
   status = 200
-  force = true
 
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
   CI = "true"
-  NODE_ENV = "production"
 
 [functions]
   node_bundler = "esbuild"
@@ -24,3 +22,12 @@
   targetPort = 5173
   port = 8888
   publish = "dist"
+
+[[headers]]
+  for = "/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
+    Cache-Control = "public, max-age=0, must-revalidate"
+    Content-Security-Policy = "default-src 'self' *.netlify.app; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' *.netlify.app https://*.netlify.app/.netlify/functions/*;"

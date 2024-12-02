@@ -24,8 +24,7 @@ export default defineConfig({
       '/.netlify/functions': {
         target: 'http://localhost:8888',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/.netlify\/functions/, '')
+        secure: false
       }
     }
   },
@@ -33,5 +32,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     }
+  },
+  define: {
+    'process.env': {}
   }
 });

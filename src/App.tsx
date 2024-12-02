@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { UrlInput } from './components/Form/UrlInput';
 import { AnalysisResults } from './components/Analysis/AnalysisResults';
 import { ErrorDisplay } from './components/Analysis/ErrorDisplay';
@@ -6,53 +6,42 @@ import { CalculationExamples } from './components/Analysis/CalculationExamples';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
-import { scrapeWebpage } from './services/scraper';
+import { LoadingSpinner } from './components/LoadingSpinner';
+import { useApi } from './hooks/useApi';
 import { logger } from './utils/logger';
 import type { AnalysisResult } from './types';
 
 export default function App() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<{ message: string; details?: string } | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isInputEnabled, setIsInputEnabled] = useState(true);
+  const { request, isLoading, error, data: result, reset } = useApi({
+    onSuccess: () => setIsInputEnabled(false),
+    onError: (error) => logger.error('Analysis failed:', error)
+  });
+
+  useEffect(() => {
+    setIsInitialized(true);
+  }, []);
 
   const handleAnalyze = async (url: string) => {
-    logger.info('Starting analysis', { url });
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const analysisResult = await scrapeWebpage(url);
-      logger.info('Analysis complete', { 
-        wordCount: analysisResult.totalWords,
-        headings: Object.keys(analysisResult.headings).length
-      });
-      
-      setResult(analysisResult);
-      setIsInputEnabled(false);
-    } catch (err: any) {
-      logger.error('Analysis failed', { 
-        error: err,
-        url,
-        message: err.message,
-        stack: err.stack
-      });
-      
-      setError({
-        message: err.message || 'Analysis failed',
-        details: err.details || 'An unexpected error occurred'
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await request('/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ url })
+    });
   };
 
   const handleNewAnalysis = () => {
-    logger.info('Starting new analysis');
     setIsInputEnabled(true);
-    setResult(null);
-    setError(null);
+    reset();
   };
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <ErrorBoundary>
@@ -71,15 +60,21 @@ export default function App() {
             {error && (
               <ErrorDisplay 
                 message={error.message} 
-                details={error.details}
+                details={error instanceof Error ? error.message : undefined}
               />
+            )}
+            
+            {isLoading && (
+              <div className="flex justify-center py-12">
+                <LoadingSpinner />
+              </div>
             )}
             
             {result && (
               <AnalysisResults result={result} />
             )}
             
-            {!result && !error && (
+            {!result && !error && !isLoading && (
               <CalculationExamples />
             )}
           </div>

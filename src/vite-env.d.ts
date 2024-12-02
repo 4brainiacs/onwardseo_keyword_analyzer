@@ -10,3 +10,12 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare global {
+  interface Window {
+    __RUNTIME_CONFIG__: {
+      VITE_API_URL: string;
+      NODE_ENV: string;
+    };
+  }
+}

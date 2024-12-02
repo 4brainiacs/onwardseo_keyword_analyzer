@@ -1,10 +1,9 @@
 import fetch from 'node-fetch';
 import cheerio from 'cheerio';
-import { validateUrl } from './utils/validators.js';
 import { analyzeContent } from './services/analyzer/index.js';
 import { logger } from './services/utils/logger.js';
 
-const headers = {
+const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -12,14 +11,19 @@ const headers = {
 };
 
 export const handler = async (event) => {
+  // Handle preflight requests
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers };
+    return { 
+      statusCode: 204, 
+      headers: corsHeaders,
+      body: ''
+    };
   }
 
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers,
+      headers: corsHeaders,
       body: JSON.stringify({
         success: false,
         error: 'Method not allowed'
@@ -34,22 +38,10 @@ export const handler = async (event) => {
     if (!url) {
       return {
         statusCode: 400,
-        headers,
+        headers: corsHeaders,
         body: JSON.stringify({
           success: false,
           error: 'URL is required'
-        })
-      };
-    }
-
-    const urlValidation = validateUrl(url);
-    if (!urlValidation.isValid) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({
-          success: false,
-          error: urlValidation.error
         })
       };
     }
@@ -87,10 +79,11 @@ export const handler = async (event) => {
     }
 
     const result = analyzeContent(html);
+    logger.info('Analysis complete');
 
     return {
       statusCode: 200,
-      headers,
+      headers: corsHeaders,
       body: JSON.stringify({
         success: true,
         data: result
@@ -100,7 +93,7 @@ export const handler = async (event) => {
     logger.error('Analysis error:', error);
     return {
       statusCode: 500,
-      headers,
+      headers: corsHeaders,
       body: JSON.stringify({
         success: false,
         error: 'Failed to analyze webpage',

@@ -1,4 +1,4 @@
-class Logger {
+export class Logger {
   info(message, data = {}) {
     this.log('INFO', message, data);
   }
