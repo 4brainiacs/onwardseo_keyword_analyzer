@@ -7,28 +7,34 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { useApi } from './hooks/useApi';
+import { useAnalysis } from './hooks/useAnalysis';
 import { logger } from './utils/logger';
-import type { AnalysisResult } from './types';
 
 export default function App() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isInputEnabled, setIsInputEnabled] = useState(true);
-  const { request, isLoading, error, data: result, reset } = useApi({
+  
+  const { 
+    analyze, 
+    reset, 
+    isLoading, 
+    error, 
+    result 
+  } = useAnalysis({
     onSuccess: () => setIsInputEnabled(false),
     onError: (error) => logger.error('Analysis failed:', error)
   });
 
   useEffect(() => {
-    setIsInitialized(true);
+    try {
+      if (!window.__RUNTIME_CONFIG__?.VITE_API_URL) {
+        throw new Error('Missing API configuration');
+      }
+      setIsInitialized(true);
+    } catch (error) {
+      logger.error('Initialization failed:', error);
+    }
   }, []);
-
-  const handleAnalyze = async (url: string) => {
-    await request('/analyze', {
-      method: 'POST',
-      body: JSON.stringify({ url })
-    });
-  };
 
   const handleNewAnalysis = () => {
     setIsInputEnabled(true);
@@ -51,7 +57,7 @@ export default function App() {
         <main className="flex-grow container mx-auto px-4 py-8">
           <div className="space-y-8">
             <UrlInput 
-              onAnalyze={handleAnalyze} 
+              onAnalyze={analyze}
               isLoading={isLoading}
               isEnabled={isInputEnabled}
               onNewAnalysis={handleNewAnalysis}
@@ -59,7 +65,7 @@ export default function App() {
             
             {error && (
               <ErrorDisplay 
-                message={error.message} 
+                message={error.message}
                 details={error instanceof Error ? error.message : undefined}
               />
             )}

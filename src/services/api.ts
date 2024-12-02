@@ -1,6 +1,6 @@
 import { AnalysisError } from './errors';
-import type { ApiResponse } from './api/types';
 import { logger } from '../utils/logger';
+import type { AnalysisResult } from '../types';
 
 export async function fetchApi<T>(
   endpoint: string,
@@ -27,7 +27,6 @@ export async function fetchApi<T>(
       });
 
       clearTimeout(timeoutId);
-      logger.info('API Response Status:', response.status);
 
       if (!response.ok) {
         const text = await response.text();
@@ -47,7 +46,7 @@ export async function fetchApi<T>(
         );
       }
 
-      const data = await response.json() as ApiResponse<T>;
+      const data = await response.json();
       
       if (!data || !data.success || !data.data) {
         logger.error('Invalid Response Format:', data);
@@ -58,7 +57,6 @@ export async function fetchApi<T>(
         );
       }
 
-      logger.info('API Response Data:', data);
       return data.data;
     } finally {
       clearTimeout(timeoutId);
@@ -68,14 +66,6 @@ export async function fetchApi<T>(
     
     if (error instanceof AnalysisError) {
       throw error;
-    }
-
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new AnalysisError(
-        'Request timeout',
-        408,
-        'The request took too long to complete'
-      );
     }
 
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
@@ -88,6 +78,37 @@ export async function fetchApi<T>(
 
     throw new AnalysisError(
       'Request failed',
+      500,
+      error instanceof Error ? error.message : 'An unexpected error occurred'
+    );
+  }
+}
+
+export async function analyzeUrl(url: string): Promise<AnalysisResult> {
+  try {
+    logger.info('Starting URL analysis', { url });
+    
+    return await fetchApi<AnalysisResult>('/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ url })
+    });
+  } catch (error) {
+    logger.error('Analysis failed:', error);
+
+    if (error instanceof AnalysisError) {
+      throw error;
+    }
+
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      throw new AnalysisError(
+        'Network error',
+        503,
+        'Unable to connect to the analysis service. Please try again.'
+      );
+    }
+
+    throw new AnalysisError(
+      'Failed to analyze webpage',
       500,
       error instanceof Error ? error.message : 'An unexpected error occurred'
     );

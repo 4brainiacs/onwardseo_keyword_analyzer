@@ -30,4 +30,17 @@
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type"
     Cache-Control = "public, max-age=0, must-revalidate"
-    Content-Security-Policy = "default-src 'self' *.netlify.app; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' *.netlify.app https://*.netlify.app/.netlify/functions/*;"
+    Content-Security-Policy = """
+      default-src 'self' *.netlify.app;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com;
+      style-src 'self' 'unsafe-inline';
+      font-src 'self' data: https://fonts.gstatic.com;
+      img-src 'self' data: https: blob:;
+      connect-src 'self' *.netlify.app https://*.netlify.app/.netlify/functions/* https://static.cloudflareinsights.com;
+      frame-src 'none';
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      frame-ancestors 'none';
+      upgrade-insecure-requests;
+    """
