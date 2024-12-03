@@ -26,9 +26,31 @@ export class BaseError extends Error {
 }
 
 export class AnalysisError extends BaseError {
+  constructor(
+    message: string,
+    status: number = 500,
+    details?: string,
+    retryable: boolean = false,
+    retryAfter?: number,
+    requestId?: string
+  ) {
+    super(message, status, details, retryable, retryAfter, requestId);
+  }
+
   static fromError(error: unknown, requestId?: string): AnalysisError {
     if (error instanceof AnalysisError) {
       return error;
+    }
+
+    if (error instanceof Response) {
+      return new AnalysisError(
+        'Request failed',
+        error.status,
+        `Server returned status ${error.status}`,
+        error.status >= 500,
+        undefined,
+        requestId
+      );
     }
 
     return new AnalysisError(

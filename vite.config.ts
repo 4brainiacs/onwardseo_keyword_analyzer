@@ -32,20 +32,14 @@ export default defineConfig({
       '/.netlify/functions': {
         target: 'http://localhost:8888',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        rewrite: (path) => path.replace(/^\/.netlify\/functions/, '')
       }
     }
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
-    }
-  },
-  define: {
-    'process.env': {},
-    '__RUNTIME_CONFIG__': {
-      VITE_API_URL: '/.netlify/functions',
-      NODE_ENV: process.env.NODE_ENV || 'development'
     }
   }
 });

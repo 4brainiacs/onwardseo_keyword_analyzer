@@ -1,93 +1,68 @@
 import { env } from '../../config/environment';
 import { logger } from '../../utils/logger';
-import { AnalysisError, NetworkError } from '../errors';
-import { apiConfig } from './config';
-import type { ApiResponse } from './types';
+import { AnalysisError } from '../errors';
+import { validateContentType, validateStatus, validateJsonResponse } from './utils/validation';
+import { createRequestConfig } from './utils/request';
+import { shouldRetry, calculateRetryDelay } from './utils/retry';
+import { API_DEFAULTS } from './constants';
+import type { ApiResponse, RequestConfig } from './types';
 
 export class ApiClient {
   private baseUrl: string;
-  private timeout: number;
 
   constructor() {
     this.baseUrl = env.api.baseUrl;
-    this.timeout = apiConfig.timeout;
   }
 
-  async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-    const requestId = crypto.randomUUID();
+  async request<T>(endpoint: string, options: RequestConfig = {}): Promise<T> {
+    let attempt = 0;
+    const maxAttempts = options.retries ?? API_DEFAULTS.MAX_RETRIES;
 
-    try {
-      logger.info('API Request:', { url, method: options.method || 'GET', requestId });
-
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-        headers: {
-          ...apiConfig.headers,
-          'X-Request-ID': requestId,
-          ...options.headers,
-        }
-      });
-
-      const responseText = await response.text();
-      
-      if (!responseText) {
-        throw new AnalysisError(
-          'Empty response',
-          500,
-          'Server returned an empty response',
-          true,
-          undefined,
-          requestId
-        );
-      }
-
-      let data: ApiResponse<T>;
+    while (attempt < maxAttempts) {
       try {
-        data = JSON.parse(responseText);
+        const config = createRequestConfig({
+          ...options,
+          timeout: options.timeout ?? API_DEFAULTS.TIMEOUT
+        });
+
+        const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+
+        // Validate response format
+        validateContentType(response);
+        validateStatus(response);
+        
+        const data = await validateJsonResponse<T>(response);
+        return data.data as T;
+
       } catch (error) {
-        logger.error('API Error Response:', responseText);
+        attempt++;
+        
+        if (shouldRetry(error, attempt) && attempt < maxAttempts) {
+          const delay = calculateRetryDelay(attempt);
+          logger.warn(`Retrying request (${attempt}/${maxAttempts}) after ${delay}ms`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+
+        if (error instanceof AnalysisError) {
+          throw error;
+        }
+
         throw new AnalysisError(
-          'Invalid server response',
+          'Request failed',
           500,
-          'Server returned invalid JSON data',
-          true,
-          undefined,
-          requestId
+          error instanceof Error ? error.message : 'An unexpected error occurred',
+          true
         );
       }
-
-      if (!response.ok || !data.success) {
-        throw new AnalysisError(
-          data.error || 'Request failed',
-          response.status,
-          data.details || `Server returned status ${response.status}`,
-          response.status >= 500,
-          data.retryAfter,
-          requestId
-        );
-      }
-
-      return data.data as T;
-    } catch (error) {
-      if (error instanceof AnalysisError) {
-        throw error;
-      }
-
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        throw new NetworkError(
-          'Network error',
-          'Unable to connect to the server'
-        );
-      }
-
-      throw AnalysisError.fromError(error, requestId);
-    } finally {
-      clearTimeout(timeoutId);
     }
+
+    throw new AnalysisError(
+      'Max retries exceeded',
+      500,
+      'The request failed after multiple attempts',
+      false
+    );
   }
 }
 

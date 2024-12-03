@@ -2,22 +2,19 @@ import { apiClient } from './client';
 import { logger } from '../../utils/logger';
 import { AnalysisError } from '../errors';
 import type { AnalysisResult } from '../../types';
-import { validateAnalysisResult } from '../validation/validator';
 
 export async function analyzeUrl(url: string): Promise<AnalysisResult> {
   try {
     logger.info('Starting URL analysis', { url });
     
-    const response = await apiClient.request<AnalysisResult>('/analyze', {
+    const result = await apiClient.request<AnalysisResult>('/.netlify/functions/analyze', {
       method: 'POST',
-      body: JSON.stringify({ url })
+      body: JSON.stringify({ url }),
+      retries: 3,
+      timeout: 30000
     });
 
-    // Validate the response data
-    validateAnalysisResult(response);
-    
-    logger.info('Analysis completed successfully', { url });
-    return response;
+    return result;
   } catch (error) {
     logger.error('Analysis failed:', error);
 
@@ -26,7 +23,7 @@ export async function analyzeUrl(url: string): Promise<AnalysisResult> {
     }
 
     throw new AnalysisError(
-      'Analysis failed',
+      'Failed to analyze webpage',
       500,
       error instanceof Error ? error.message : 'An unexpected error occurred',
       true

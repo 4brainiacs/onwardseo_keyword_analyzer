@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { analyzeUrl } from '../services/api';
-import { validateUrl } from '../utils/validation';
+import { validateUrl } from '../utils/validation/urlValidator';
 import { AnalysisError } from '../services/errors';
 import { logger } from '../utils/logger';
 import type { AnalysisResult } from '../types';

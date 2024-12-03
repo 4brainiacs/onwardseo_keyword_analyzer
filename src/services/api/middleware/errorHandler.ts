@@ -1,50 +1,41 @@
-import { AnalysisError, NetworkError, ServerError } from '../../errors';
+import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import type { ApiResponse } from '../types';
 
-export async function handleApiError(error: unknown, requestId?: string): Promise<never> {
+export function handleApiError(error: unknown, requestId?: string): AnalysisError {
   logger.error('API Error:', { error, requestId });
 
   if (error instanceof AnalysisError) {
-    throw error;
-  }
-
-  if (error instanceof Response) {
-    let errorData: ApiResponse;
-    try {
-      const text = await error.text();
-      errorData = JSON.parse(text);
-      throw new ServerError(
-        errorData.error || 'Request failed',
-        errorData.details || `Server returned status ${error.status}`
-      );
-    } catch (parseError) {
-      throw new ServerError(
-        'Request failed',
-        `Server returned status ${error.status}`
-      );
-    }
+    return error;
   }
 
   if (error instanceof TypeError) {
     if (error.message.includes('Failed to fetch')) {
-      throw new NetworkError(
+      return new AnalysisError(
         'Network error',
-        'Unable to connect to the server. Please check your connection.'
+        503,
+        'Unable to connect to the server. Please check your connection.',
+        true,
+        5000,
+        requestId
       );
     }
+
     if (error.message.includes('aborted')) {
-      throw new NetworkError(
+      return new AnalysisError(
         'Request timeout',
-        'The request took too long to complete. Please try again.'
+        408,
+        'The request took too long to complete. Please try again.',
+        true,
+        5000,
+        requestId
       );
     }
   }
 
-  throw new AnalysisError(
-    error instanceof Error ? error.message : 'An unexpected error occurred',
+  return new AnalysisError(
+    'Request failed',
     500,
-    undefined,
+    error instanceof Error ? error.message : 'An unexpected error occurred',
     true,
     5000,
     requestId

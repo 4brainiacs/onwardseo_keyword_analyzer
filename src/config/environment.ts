@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { logger } from '../utils/logger';
 
 const envSchema = z.object({
   api: z.object({
@@ -37,22 +36,7 @@ function validateEnvironment(): Environment {
     }
   };
 
-  try {
-    return envSchema.parse(config);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      logger.error('Environment validation failed:', {
-        errors: error.errors,
-        config: {
-          ...config,
-          api: {
-            baseUrl: config.api.baseUrl || 'Not set'
-          }
-        }
-      });
-    }
-    throw new Error('Invalid environment configuration');
-  }
+  return envSchema.parse(config);
 }
 
 export const env = validateEnvironment();
