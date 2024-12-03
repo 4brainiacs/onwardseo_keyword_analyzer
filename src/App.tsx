@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { UrlInput } from './components/Form/UrlInput';
 import { AnalysisResults } from './components/Analysis/AnalysisResults';
 import { ErrorDisplay } from './components/Analysis/ErrorDisplay';
@@ -9,10 +9,9 @@ import { Footer } from './components/Layout/Footer';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { useAnalysis } from './hooks/useAnalysis';
 import { logger } from './utils/logger';
-import { env } from './config/environment';
+import { AnalysisError } from './services/errors';
 
 export default function App() {
-  const [isInitialized, setIsInitialized] = useState(false);
   const [isInputEnabled, setIsInputEnabled] = useState(true);
   
   const { 
@@ -22,33 +21,22 @@ export default function App() {
     error, 
     result 
   } = useAnalysis({
-    onSuccess: () => setIsInputEnabled(false),
-    onError: (error) => logger.error('Analysis failed:', error)
-  });
-
-  useEffect(() => {
-    try {
-      if (!env.api.baseUrl) {
-        throw new Error('Missing API configuration');
-      }
-      setIsInitialized(true);
-    } catch (error) {
-      logger.error('Initialization failed:', error);
+    onSuccess: () => {
+      setIsInputEnabled(false);
+      logger.info('Analysis completed successfully');
+    },
+    onError: (error) => {
+      logger.error('Analysis failed:', {
+        error: error instanceof AnalysisError ? error.toJSON() : error,
+        context: 'App component error handler'
+      });
     }
-  }, []);
+  });
 
   const handleNewAnalysis = () => {
     setIsInputEnabled(true);
     reset();
   };
-
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <LoadingSpinner />
-      </div>
-    );
-  }
 
   return (
     <ErrorBoundary>
@@ -66,8 +54,9 @@ export default function App() {
             
             {error && (
               <ErrorDisplay 
-                message={error.message}
-                details={error instanceof Error ? error.message : undefined}
+                error={error}
+                onRetry={error instanceof AnalysisError && error.retryable ? 
+                  () => analyze(error.requestId || '') : undefined}
               />
             )}
             

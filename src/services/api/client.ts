@@ -1,100 +1,93 @@
 import { env } from '../../config/environment';
-import { ApiResponse, ApiError } from './types';
 import { logger } from '../../utils/logger';
-
-const DEFAULT_TIMEOUT = 30000;
+import { AnalysisError, NetworkError } from '../errors';
+import { apiConfig } from './config';
+import type { ApiResponse } from './types';
 
 export class ApiClient {
-  private controller: AbortController;
+  private baseUrl: string;
   private timeout: number;
 
-  constructor(timeout = DEFAULT_TIMEOUT) {
-    this.controller = new AbortController();
-    this.timeout = timeout;
+  constructor() {
+    this.baseUrl = env.api.baseUrl;
+    this.timeout = apiConfig.timeout;
   }
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${env.api.baseUrl}${endpoint}`;
-    const timeoutId = setTimeout(() => this.controller.abort(), this.timeout);
+    const url = `${this.baseUrl}${endpoint}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+    const requestId = crypto.randomUUID();
 
     try {
-      logger.info('API Request:', { url, method: options.method || 'GET' });
+      logger.info('API Request:', { url, method: options.method || 'GET', requestId });
 
       const response = await fetch(url, {
         ...options,
-        signal: this.controller.signal,
+        signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          ...apiConfig.headers,
+          'X-Request-ID': requestId,
           ...options.headers,
-        },
-        credentials: 'same-origin'
+        }
       });
 
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        throw await this.handleErrorResponse(response);
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        throw new Error('Invalid response type from server');
-      }
-
-      const data = await response.json() as ApiResponse<T>;
+      const responseText = await response.text();
       
-      if (!data.success || !data.data) {
-        throw new Error(data.error || 'Invalid response format');
+      if (!responseText) {
+        throw new AnalysisError(
+          'Empty response',
+          500,
+          'Server returned an empty response',
+          true,
+          undefined,
+          requestId
+        );
       }
 
-      return data.data;
+      let data: ApiResponse<T>;
+      try {
+        data = JSON.parse(responseText);
+      } catch (error) {
+        logger.error('API Error Response:', responseText);
+        throw new AnalysisError(
+          'Invalid server response',
+          500,
+          'Server returned invalid JSON data',
+          true,
+          undefined,
+          requestId
+        );
+      }
+
+      if (!response.ok || !data.success) {
+        throw new AnalysisError(
+          data.error || 'Request failed',
+          response.status,
+          data.details || `Server returned status ${response.status}`,
+          response.status >= 500,
+          data.retryAfter,
+          requestId
+        );
+      }
+
+      return data.data as T;
     } catch (error) {
-      this.handleError(error as Error);
-      throw error;
+      if (error instanceof AnalysisError) {
+        throw error;
+      }
+
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        throw new NetworkError(
+          'Network error',
+          'Unable to connect to the server'
+        );
+      }
+
+      throw AnalysisError.fromError(error, requestId);
     } finally {
       clearTimeout(timeoutId);
     }
-  }
-
-  private async handleErrorResponse(response: Response): Promise<never> {
-    let error: ApiError;
-
-    try {
-      const data = await response.json();
-      error = {
-        message: data.error || 'Request failed',
-        code: response.status.toString(),
-        details: data.details,
-        retryable: response.status >= 500,
-        retryAfter: data.retryAfter
-      };
-    } catch {
-      error = {
-        message: `HTTP Error ${response.status}`,
-        code: response.status.toString(),
-        retryable: response.status >= 500
-      };
-    }
-
-    logger.error('API Error:', { ...error, status: response.status });
-    throw error;
-  }
-
-  private handleError(error: Error): never {
-    if (error.name === 'AbortError') {
-      throw new Error('Request timed out. Please try again.');
-    }
-
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      throw new Error('Network error. Please check your connection and try again.');
-    }
-
-    throw error;
-  }
-
-  abort(): void {
-    this.controller.abort();
   }
 }
 

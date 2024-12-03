@@ -2,9 +2,9 @@ import { env } from '../../config/environment';
 
 export const scrapingConfig = {
   api: {
-    key: env.scrapingBee.apiKey,
+    key: env.scrapingBee.apiKey || '',
     baseUrl: env.scrapingBee.baseUrl,
-    timeout: 30000, 
+    timeout: 30000,
     maxRetries: env.app.isProd ? 3 : 1,
     retryDelay: 2000,
     maxContentSize: 10 * 1024 * 1024

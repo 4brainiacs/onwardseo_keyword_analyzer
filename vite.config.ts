@@ -3,7 +3,15 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      babel: {
+        plugins: [
+          ['@babel/plugin-proposal-decorators', { legacy: true }]
+        ]
+      }
+    })
+  ],
   build: {
     outDir: 'dist',
     sourcemap: true,
@@ -34,6 +42,10 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env': {}
+    'process.env': {},
+    '__RUNTIME_CONFIG__': {
+      VITE_API_URL: '/.netlify/functions',
+      NODE_ENV: process.env.NODE_ENV || 'development'
+    }
   }
 });

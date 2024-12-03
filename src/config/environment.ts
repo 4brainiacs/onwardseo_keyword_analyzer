@@ -23,15 +23,17 @@ function getApiUrl(): string {
 }
 
 function validateEnvironment(): Environment {
+  const mode = import.meta.env.MODE || 'development';
+  
   const config = {
     api: {
       baseUrl: getApiUrl()
     },
     app: {
-      env: (import.meta.env.MODE || 'development') as Environment['app']['env'],
-      isDev: import.meta.env.DEV === true,
-      isProd: import.meta.env.PROD === true,
-      isTest: import.meta.env.MODE === 'test'
+      env: mode as Environment['app']['env'],
+      isDev: mode === 'development',
+      isProd: mode === 'production',
+      isTest: mode === 'test'
     }
   };
 

@@ -7,6 +7,10 @@ export const environmentSchema = z.object({
       { message: 'API URL must start with / or http' }
     )
   }),
+  scrapingBee: z.object({
+    apiKey: z.string().optional(),
+    baseUrl: z.string().url()
+  }),
   app: z.object({
     env: z.enum(['development', 'production', 'test']),
     isDev: z.boolean(),

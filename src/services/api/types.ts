@@ -1,27 +1,31 @@
-import type { AnalysisResult } from '../../types';
-
-export type ApiStatus = 'idle' | 'loading' | 'success' | 'error' | 'retrying';
-
-export interface ApiState {
-  status: ApiStatus;
-  error: Error | null;
-  data: AnalysisResult | null;
-  retryCount: number;
-  lastAttempt?: Date;
-}
-
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
   details?: string;
+  retryable?: boolean;
   retryAfter?: number;
+  timestamp?: string;
+  requestId?: string;
 }
 
 export interface ApiError {
-  message: string;
-  code: string;
+  success: false;
+  error: string;
   details?: string;
   retryable?: boolean;
   retryAfter?: number;
+  code?: string;
+  timestamp?: string;
+  requestId?: string;
+}
+
+export type LoadingState = 'idle' | 'loading' | 'retrying' | 'success' | 'error';
+
+export interface RequestState {
+  status: LoadingState;
+  error?: Error | null;
+  retryCount: number;
+  lastAttempt?: Date;
+  requestId?: string;
 }

@@ -1,103 +1,105 @@
-import fetch from 'node-fetch';
-import cheerio from 'cheerio';
 import { analyzeContent } from './services/analyzer/index.js';
 import { logger } from './services/utils/logger.js';
+import { validateUrl } from './utils/validators.js';
 
-const corsHeaders = {
+const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Request-ID',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Content-Type': 'application/json'
 };
 
 export const handler = async (event) => {
-  // Handle preflight requests
+  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return { 
       statusCode: 204, 
-      headers: corsHeaders,
+      headers: CORS_HEADERS,
       body: ''
     };
   }
 
+  // Validate HTTP method
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: corsHeaders,
+      headers: CORS_HEADERS,
       body: JSON.stringify({
         success: false,
-        error: 'Method not allowed'
+        error: 'Method not allowed',
+        details: 'Only POST requests are allowed'
       })
     };
   }
 
   try {
-    const { url } = JSON.parse(event.body || '{}');
-    logger.info('Analyzing URL:', url);
-
-    if (!url) {
+    // Parse and validate request body
+    let url;
+    try {
+      const body = JSON.parse(event.body || '{}');
+      url = body.url;
+    } catch (error) {
       return {
         statusCode: 400,
-        headers: corsHeaders,
+        headers: CORS_HEADERS,
         body: JSON.stringify({
           success: false,
-          error: 'URL is required'
+          error: 'Invalid request body',
+          details: 'Request body must be valid JSON'
         })
       };
     }
 
-    const apiKey = process.env.SCRAPINGBEE_API_KEY;
-    if (!apiKey) {
-      throw new Error('SCRAPINGBEE_API_KEY is not configured');
+    // Validate URL
+    const urlValidation = validateUrl(url);
+    if (!urlValidation.isValid) {
+      return {
+        statusCode: 400,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({
+          success: false,
+          error: 'Invalid URL',
+          details: urlValidation.error
+        })
+      };
     }
 
-    const params = new URLSearchParams({
-      api_key: apiKey,
-      url: url,
-      render_js: 'false',
-      premium_proxy: 'true',
-      block_ads: 'true',
-      block_resources: 'true',
-      wait_browser: 'false',
-      timeout: '30000'
-    });
+    // Get request ID from headers
+    const requestId = event.headers['x-request-id'] || crypto.randomUUID();
 
-    const response = await fetch(`https://app.scrapingbee.com/api/v1?${params}`, {
-      headers: {
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-US,en;q=0.5'
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`ScrapingBee API error: ${response.status}`);
-    }
-
-    const html = await response.text();
-    if (!html) {
-      throw new Error('Empty response from ScrapingBee');
-    }
-
-    const result = analyzeContent(html);
-    logger.info('Analysis complete');
+    logger.info('Starting analysis:', { url, requestId });
+    const result = await analyzeContent(url);
+    logger.info('Analysis complete', { requestId });
 
     return {
       statusCode: 200,
-      headers: corsHeaders,
+      headers: {
+        ...CORS_HEADERS,
+        'X-Request-ID': requestId
+      },
       body: JSON.stringify({
         success: true,
-        data: result
+        data: result,
+        requestId
       })
     };
   } catch (error) {
-    logger.error('Analysis error:', error);
+    const requestId = event.headers['x-request-id'];
+    logger.error('Analysis error:', { error, requestId });
+
     return {
       statusCode: 500,
-      headers: corsHeaders,
+      headers: {
+        ...CORS_HEADERS,
+        'X-Request-ID': requestId
+      },
       body: JSON.stringify({
         success: false,
         error: 'Failed to analyze webpage',
-        details: error.message
+        details: error.message || 'An unexpected error occurred',
+        retryable: true,
+        retryAfter: 5000,
+        requestId
       })
     };
   }

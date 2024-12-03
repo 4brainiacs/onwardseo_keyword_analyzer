@@ -19,18 +19,18 @@ export function validateUrl(url) {
 
     // Block localhost and private IPs
     const hostname = parsedUrl.hostname.toLowerCase();
-    if (isPrivateOrLocalhost(hostname)) {
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname.startsWith('192.168.') ||
+      hostname.startsWith('10.') ||
+      hostname.startsWith('172.16.') ||
+      hostname.startsWith('169.254.') ||
+      hostname === '[::1]'
+    ) {
       return { 
         isValid: false, 
         error: 'Local and private URLs are not allowed' 
-      };
-    }
-
-    // Check URL length
-    if (url.length > 2000) {
-      return {
-        isValid: false,
-        error: 'URL exceeds maximum length of 2000 characters'
       };
     }
 
@@ -43,6 +43,14 @@ export function validateUrl(url) {
       };
     }
 
+    // Length validation
+    if (url.length > 2000) {
+      return {
+        isValid: false,
+        error: 'URL exceeds maximum length of 2000 characters'
+      };
+    }
+
     return { isValid: true };
   } catch {
     return { 
@@ -50,16 +58,4 @@ export function validateUrl(url) {
       error: 'Invalid URL format' 
     };
   }
-}
-
-function isPrivateOrLocalhost(hostname) {
-  return (
-    hostname === 'localhost' ||
-    hostname === '127.0.0.1' ||
-    hostname.startsWith('192.168.') ||
-    hostname.startsWith('10.') ||
-    hostname.startsWith('172.16.') ||
-    hostname.startsWith('169.254.') ||
-    hostname === '[::1]'
-  );
 }
