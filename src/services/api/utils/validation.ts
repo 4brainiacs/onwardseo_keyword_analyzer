@@ -1,5 +1,5 @@
 import { AnalysisError } from '../../errors';
-import { CONTENT_TYPES, ERROR_MESSAGES } from '../constants';
+import { CONTENT_TYPES, ERROR_MESSAGES, HTTP_STATUS } from '../constants';
 import type { ApiResponse } from '../types';
 
 export function validateContentType(response: Response): void {
@@ -10,9 +10,18 @@ export function validateContentType(response: Response): void {
   }
 
   const normalizedType = contentType.toLowerCase();
-  if (!normalizedType.includes('application/json')) {
+  if (!normalizedType.includes(CONTENT_TYPES.JSON)) {
+    if (normalizedType.includes(CONTENT_TYPES.HTML)) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.HTML_RESPONSE,
+        HTTP_STATUS.SERVER_ERROR,
+        'Server returned HTML instead of JSON. This usually indicates a server-side error.',
+        true
+      );
+    }
+
     throw new AnalysisError(
-      ERROR_MESSAGES.INVALID_JSON,
+      'Invalid content type',
       415,
       `Expected JSON but received: ${contentType}`,
       false
@@ -20,59 +29,82 @@ export function validateContentType(response: Response): void {
   }
 }
 
-export function validateStatus(response: Response): void {
-  if (!response.ok) {
-    const status = response.status;
-    let message = ERROR_MESSAGES.SERVER_ERROR;
-    let retryable = status >= 500;
-
-    switch (status) {
-      case 401:
-        message = ERROR_MESSAGES.UNAUTHORIZED;
-        retryable = false;
-        break;
-      case 404:
-        message = ERROR_MESSAGES.NOT_FOUND;
-        retryable = false;
-        break;
-      case 400:
-        message = ERROR_MESSAGES.BAD_REQUEST;
-        retryable = false;
-        break;
-      case 429:
-        message = ERROR_MESSAGES.RATE_LIMIT;
-        retryable = true;
-        break;
-    }
-
-    throw new AnalysisError(message, status, undefined, retryable);
-  }
-}
-
 export async function validateJsonResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  let text: string;
   try {
-    const text = await response.text();
-    if (!text) {
-      throw new Error('Empty response');
-    }
-
-    // Handle HTML responses
-    if (text.trim().toLowerCase().startsWith('<!doctype') || 
-        text.trim().toLowerCase().startsWith('<html')) {
-      throw new Error('Received HTML instead of JSON');
-    }
-    
-    const data = JSON.parse(text);
-    if (!data || typeof data !== 'object') {
-      throw new Error('Invalid response format');
-    }
-    
-    return data as ApiResponse<T>;
+    text = await response.text();
   } catch (error) {
     throw new AnalysisError(
+      'Failed to read response',
+      HTTP_STATUS.SERVER_ERROR,
+      'Could not read server response',
+      true
+    );
+  }
+
+  if (!text || !text.trim()) {
+    throw new AnalysisError(
+      'Empty response',
+      HTTP_STATUS.SERVER_ERROR,
+      'Server returned an empty response',
+      true
+    );
+  }
+
+  try {
+    // Early HTML detection
+    const trimmedText = text.trim().toLowerCase();
+    if (trimmedText.startsWith('<!doctype') || 
+        trimmedText.startsWith('<html') ||
+        trimmedText.includes('</html>')) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.HTML_RESPONSE,
+        HTTP_STATUS.SERVER_ERROR,
+        'Server returned HTML instead of JSON. This usually indicates a server-side error.',
+        true
+      );
+    }
+
+    const data = JSON.parse(text);
+    
+    if (!data || typeof data !== 'object') {
+      throw new AnalysisError(
+        ERROR_MESSAGES.INVALID_RESPONSE,
+        HTTP_STATUS.SERVER_ERROR,
+        'Server returned unexpected data format',
+        true
+      );
+    }
+
+    if (!response.ok) {
+      throw new AnalysisError(
+        data.error || ERROR_MESSAGES.SERVER_ERROR,
+        response.status,
+        data.details || `Server returned status ${response.status}`,
+        response.status >= HTTP_STATUS.SERVER_ERROR,
+        data.retryAfter
+      );
+    }
+
+    if (!data.success || !data.data) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.INVALID_RESPONSE,
+        HTTP_STATUS.SERVER_ERROR,
+        'Response is missing required fields',
+        true
+      );
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof AnalysisError) {
+      throw error;
+    }
+
+    throw new AnalysisError(
       ERROR_MESSAGES.INVALID_JSON,
-      500,
-      error instanceof Error ? error.message : 'Failed to parse response as JSON',
+      HTTP_STATUS.SERVER_ERROR,
+      'Failed to parse response as JSON',
       true
     );
   }

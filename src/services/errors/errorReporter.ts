@@ -1,5 +1,6 @@
+```typescript
 import { logger } from '../../utils/logger';
-import { AnalysisError } from './index';
+import { BaseError } from './types';
 
 interface ErrorContext {
   url?: string;
@@ -9,17 +10,18 @@ interface ErrorContext {
 }
 
 export class ErrorReporter {
-  static report(error: Error | AnalysisError, context?: ErrorContext): void {
+  static report(error: Error | BaseError, context?: ErrorContext): void {
     const errorDetails = {
       name: error.name,
       message: error.message,
       stack: error.stack,
-      ...(error instanceof AnalysisError && {
+      ...(error instanceof BaseError && {
         status: error.status,
         details: error.details,
         retryable: error.retryable,
         retryAfter: error.retryAfter,
-        requestId: error.requestId
+        requestId: error.requestId,
+        context: error.context
       }),
       ...context
     };
@@ -49,3 +51,4 @@ export class ErrorReporter {
     }
   }
 }
+```

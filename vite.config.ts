@@ -3,15 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  plugins: [
-    react({
-      babel: {
-        plugins: [
-          ['@babel/plugin-proposal-decorators', { legacy: true }]
-        ]
-      }
-    })
-  ],
+  plugins: [react()],
   build: {
     outDir: 'dist',
     sourcemap: true,
@@ -32,8 +24,7 @@ export default defineConfig({
       '/.netlify/functions': {
         target: 'http://localhost:8888',
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/.netlify\/functions/, '')
+        secure: false
       }
     }
   },

@@ -8,6 +8,7 @@ import type { AnalysisResult } from '../types';
 interface UseAnalysisOptions {
   onSuccess?: (data: AnalysisResult) => void;
   onError?: (error: Error) => void;
+  retryCount?: number;
 }
 
 export function useAnalysis(options: UseAnalysisOptions = {}) {
@@ -38,7 +39,12 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
     } catch (error) {
       const analysisError = error instanceof AnalysisError 
         ? error 
-        : AnalysisError.fromError(error);
+        : new AnalysisError(
+            'Failed to analyze webpage',
+            500,
+            error instanceof Error ? error.message : 'An unexpected error occurred',
+            true
+          );
 
       setError(analysisError);
       setIsLoading(false);

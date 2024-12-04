@@ -1,10 +1,10 @@
+```typescript
 import { env } from '../../config/environment';
 import { logger } from '../../utils/logger';
 import { AnalysisError } from '../errors';
-import { validateContentType, validateStatus, validateJsonResponse } from './utils/validation';
-import { createRequestConfig } from './utils/request';
-import { shouldRetry, calculateRetryDelay } from './utils/retry';
-import { API_DEFAULTS } from './constants';
+import { validateResponse } from './validators/responseValidator';
+import { buildRequest } from './utils/requestBuilder';
+import { calculateRetryDelay, shouldRetry } from './utils/retry';
 import type { ApiResponse, RequestConfig } from './types';
 
 export class ApiClient {
@@ -14,26 +14,24 @@ export class ApiClient {
     this.baseUrl = env.api.baseUrl;
   }
 
-  async request<T>(endpoint: string, options: RequestConfig = {}): Promise<T> {
+  async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
     let attempt = 0;
-    const maxAttempts = options.retries ?? API_DEFAULTS.MAX_RETRIES;
+    const maxAttempts = config.retries ?? 3;
 
     while (attempt < maxAttempts) {
       try {
-        const config = createRequestConfig({
-          ...options,
-          timeout: options.timeout ?? API_DEFAULTS.TIMEOUT
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), config.timeout ?? 30000);
 
-        const response = await fetch(`${this.baseUrl}${endpoint}`, config);
+        const response = await fetch(`${this.baseUrl}${endpoint}`, buildRequest({
+          ...config,
+          signal: controller.signal
+        }));
 
-        // Validate response format
-        validateContentType(response);
-        validateStatus(response);
-        
-        const data = await validateJsonResponse<T>(response);
-        return data.data as T;
+        clearTimeout(timeout);
 
+        const result = await validateResponse<ApiResponse<T>>(response);
+        return result.data;
       } catch (error) {
         attempt++;
         
@@ -58,12 +56,13 @@ export class ApiClient {
     }
 
     throw new AnalysisError(
-      'Max retries exceeded',
+      'Max retry attempts reached',
       500,
-      'The request failed after multiple attempts',
+      `Failed after ${maxAttempts} attempts`,
       false
     );
   }
 }
 
 export const apiClient = new ApiClient();
+```

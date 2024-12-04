@@ -7,7 +7,7 @@ export async function analyzeUrl(url: string): Promise<AnalysisResult> {
   try {
     logger.info('Starting URL analysis', { url });
     
-    const result = await apiClient.request<AnalysisResult>('/.netlify/functions/analyze', {
+    const result = await apiClient.request<AnalysisResult>('/analyze', {
       method: 'POST',
       body: JSON.stringify({ url }),
       retries: 3,

@@ -5,7 +5,8 @@ export class BaseError extends Error {
     public readonly details?: string,
     public readonly retryable: boolean = false,
     public readonly retryAfter?: number,
-    public readonly requestId?: string
+    public readonly requestId?: string,
+    public readonly context?: Record<string, unknown>
   ) {
     super(message);
     this.name = this.constructor.name;
@@ -20,8 +21,22 @@ export class BaseError extends Error {
       details: this.details,
       retryable: this.retryable,
       retryAfter: this.retryAfter,
-      requestId: this.requestId
+      requestId: this.requestId,
+      context: this.context
     };
+  }
+
+  static fromError(error: unknown): BaseError {
+    if (error instanceof BaseError) {
+      return error;
+    }
+
+    return new BaseError(
+      error instanceof Error ? error.message : 'An unexpected error occurred',
+      500,
+      undefined,
+      true
+    );
   }
 }
 
@@ -32,52 +47,31 @@ export class AnalysisError extends BaseError {
     details?: string,
     retryable: boolean = false,
     retryAfter?: number,
-    requestId?: string
+    requestId?: string,
+    context?: Record<string, unknown>
   ) {
-    super(message, status, details, retryable, retryAfter, requestId);
-  }
-
-  static fromError(error: unknown, requestId?: string): AnalysisError {
-    if (error instanceof AnalysisError) {
-      return error;
-    }
-
-    if (error instanceof Response) {
-      return new AnalysisError(
-        'Request failed',
-        error.status,
-        `Server returned status ${error.status}`,
-        error.status >= 500,
-        undefined,
-        requestId
-      );
-    }
-
-    return new AnalysisError(
-      error instanceof Error ? error.message : 'An unexpected error occurred',
-      500,
-      undefined,
-      true,
-      5000,
-      requestId
-    );
+    super(message, status, details, retryable, retryAfter, requestId, context);
+    this.name = 'AnalysisError';
   }
 }
 
 export class NetworkError extends BaseError {
   constructor(message: string, details?: string) {
     super(message, 503, details, true, 5000);
+    this.name = 'NetworkError';
   }
 }
 
 export class ValidationError extends BaseError {
   constructor(message: string, details?: string) {
     super(message, 400, details, false);
+    this.name = 'ValidationError';
   }
 }
 
 export class ServerError extends BaseError {
   constructor(message: string, details?: string) {
     super(message, 500, details, true, 5000);
+    this.name = 'ServerError';
   }
 }
