@@ -10,7 +10,7 @@ export async function fetchApi<T>(
     const baseUrl = '/.netlify/functions';
     const url = `${baseUrl}${endpoint}`;
     
-    logger.info('Fetching API:', url);
+    logger.info('Fetching API:', { url, method: options.method });
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -28,32 +28,61 @@ export async function fetchApi<T>(
 
       clearTimeout(timeoutId);
 
-      if (!response.ok) {
-        const text = await response.text();
-        logger.error('API Error Response:', text);
-        
-        let errorData;
-        try {
-          errorData = JSON.parse(text);
-        } catch (e) {
-          throw new AnalysisError('Invalid server response', response.status);
-        }
-
+      const contentType = response.headers.get('Content-Type');
+      if (!contentType?.includes('application/json')) {
+        logger.error('Invalid content type:', { 
+          contentType,
+          status: response.status
+        });
         throw new AnalysisError(
-          errorData.error || 'Request failed',
+          'Invalid response type',
           response.status,
-          errorData.details || `Server returned status ${response.status}`
+          'Expected JSON response from server'
         );
       }
 
-      const data = await response.json();
-      
-      if (!data || !data.success || !data.data) {
-        logger.error('Invalid Response Format:', data);
+      const text = await response.text();
+      logger.debug('Raw response:', { text });
+
+      if (!text) {
+        throw new AnalysisError(
+          'Empty response',
+          500,
+          'Server returned an empty response'
+        );
+      }
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        logger.error('JSON parse error:', { 
+          error: e,
+          text: text.substring(0, 1000)
+        });
+        throw new AnalysisError(
+          'Invalid JSON response',
+          500,
+          'Server returned invalid JSON data'
+        );
+      }
+
+      if (!response.ok) {
+        throw new AnalysisError(
+          data.error || 'Request failed',
+          response.status,
+          data.details || `Server returned status ${response.status}`,
+          response.status >= 500,
+          data.retryAfter
+        );
+      }
+
+      if (!data.success || typeof data.data === 'undefined') {
+        logger.error('Invalid response format:', data);
         throw new AnalysisError(
           'Invalid response format',
           500,
-          'Server returned an unexpected response format'
+          'Server returned unexpected data structure'
         );
       }
 
@@ -62,24 +91,37 @@ export async function fetchApi<T>(
       clearTimeout(timeoutId);
     }
   } catch (error) {
-    logger.error('API Error:', error);
-    
     if (error instanceof AnalysisError) {
       throw error;
+    }
+
+    if (error.name === 'AbortError') {
+      throw new AnalysisError(
+        'Request timeout',
+        408,
+        'The request took too long to complete',
+        true,
+        5000
+      );
     }
 
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
       throw new AnalysisError(
         'Network error',
         503,
-        'Unable to connect to the server. Please check your connection.'
+        'Unable to connect to the server',
+        true,
+        5000
       );
     }
 
+    logger.error('Unhandled API error:', error);
     throw new AnalysisError(
       'Request failed',
       500,
-      error instanceof Error ? error.message : 'An unexpected error occurred'
+      error.message || 'An unexpected error occurred',
+      true,
+      5000
     );
   }
 }
@@ -94,23 +136,6 @@ export async function analyzeUrl(url: string): Promise<AnalysisResult> {
     });
   } catch (error) {
     logger.error('Analysis failed:', error);
-
-    if (error instanceof AnalysisError) {
-      throw error;
-    }
-
-    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      throw new AnalysisError(
-        'Network error',
-        503,
-        'Unable to connect to the analysis service. Please try again.'
-      );
-    }
-
-    throw new AnalysisError(
-      'Failed to analyze webpage',
-      500,
-      error instanceof Error ? error.message : 'An unexpected error occurred'
-    );
+    throw error;
   }
 }

@@ -1,10 +1,13 @@
-export function buildRequest(options: RequestInit = {}): RequestInit {
+import { CONTENT_TYPES } from '../constants';
+import type { RequestConfig } from '../types';
+
+export function buildRequest(config: RequestConfig = {}): RequestInit {
   return {
-    ...options,
+    ...config,
     headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-      ...options.headers
+      'Accept': CONTENT_TYPES.JSON,
+      'Content-Type': CONTENT_TYPES.JSON,
+      ...config.headers
     },
     credentials: 'same-origin',
     mode: 'cors'

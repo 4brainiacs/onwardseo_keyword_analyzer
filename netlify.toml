@@ -30,22 +30,9 @@
   publish = "dist"
 
 [[headers]]
-  for = "/*"
+  for = "/.netlify/functions/*"
     [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, X-Request-ID"
-    Cache-Control = "public, max-age=0, must-revalidate"
-    Content-Security-Policy = """
-      default-src 'self' *.netlify.app;
-      script-src 'self' 'unsafe-inline' 'unsafe-eval';
-      style-src 'self' 'unsafe-inline';
-      img-src 'self' data: https: blob:;
-      connect-src 'self' *.netlify.app https://*.netlify.app/.netlify/functions/*;
-      frame-src 'none';
-      object-src 'none';
-      base-uri 'self';
-      form-action 'self';
-      frame-ancestors 'none';
-      upgrade-insecure-requests;
-    """
+    Content-Type = "application/json"

@@ -1,4 +1,3 @@
-```typescript
 import { AnalysisError } from '../../errors';
 import { CONTENT_TYPES, ERROR_MESSAGES, HTTP_STATUS } from '../constants';
 
@@ -31,4 +30,3 @@ export class ContentTypeValidator {
     }
   }
 }
-```

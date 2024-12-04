@@ -4,26 +4,12 @@ export class AnalysisError extends Error {
     public readonly status: number = 500,
     public readonly details?: string,
     public readonly retryable: boolean = false,
-    public readonly retryAfter?: number,
-    public readonly rawResponse?: string,
-    public readonly context?: Record<string, unknown>
+    public readonly retryAfter: number = 5000,
+    public readonly requestId?: string
   ) {
     super(message);
     this.name = 'AnalysisError';
-
-    // Capture stack trace
     Error.captureStackTrace(this, this.constructor);
-
-    // Log error details
-    console.error('Analysis Error:', {
-      message,
-      status,
-      details,
-      retryable,
-      retryAfter,
-      context,
-      stack: this.stack
-    });
   }
 
   toJSON() {
@@ -33,7 +19,9 @@ export class AnalysisError extends Error {
       status: this.status,
       details: this.details,
       retryable: this.retryable,
-      retryAfter: this.retryAfter
+      retryAfter: this.retryAfter,
+      requestId: this.requestId,
+      stack: this.stack
     };
   }
 }

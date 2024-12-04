@@ -10,9 +10,12 @@ interface LogEntry {
 class Logger {
   private logs: LogEntry[] = [];
   private readonly maxLogs = 1000;
+  private readonly isDev = process.env.NODE_ENV === 'development';
 
   debug(message: string, data?: any) {
-    this.log('DEBUG', message, data);
+    if (this.isDev) {
+      this.log('DEBUG', message, data);
+    }
   }
 
   info(message: string, data?: any) {
@@ -29,8 +32,10 @@ class Logger {
       ? { 
           ...data, 
           error: {
+            name: message.name,
             message: message.message,
-            stack: message.stack
+            stack: message.stack,
+            ...(message as any).toJSON?.()
           }
         }
       : data;
@@ -40,11 +45,13 @@ class Logger {
 
   private log(level: LogLevel, message: string, data?: any) {
     const timestamp = new Date().toISOString();
+    const sanitizedData = this.sanitizeData(data);
+    
     const logEntry: LogEntry = {
       timestamp,
       level,
       message,
-      data: this.sanitizeData(data)
+      data: sanitizedData
     };
     
     this.logs.push(logEntry);
@@ -52,19 +59,23 @@ class Logger {
       this.logs.shift();
     }
     
-    const consoleMessage = `[${timestamp}] ${level}: ${message}`;
+    const consoleData = sanitizedData ? 
+      '\n' + JSON.stringify(sanitizedData, null, 2) : '';
+      
+    const consoleMessage = `[${timestamp}] ${level}: ${message}${consoleData}`;
+
     switch (level) {
       case 'ERROR':
-        console.error(consoleMessage, data || '');
+        console.error(consoleMessage);
         break;
       case 'WARN':
-        console.warn(consoleMessage, data || '');
+        console.warn(consoleMessage);
         break;
       case 'INFO':
-        console.info(consoleMessage, data || '');
+        console.info(consoleMessage);
         break;
       default:
-        console.log(consoleMessage, data || '');
+        console.log(consoleMessage);
     }
   }
 
@@ -73,7 +84,10 @@ class Logger {
 
     try {
       const sanitized = { ...data };
-      const sensitiveKeys = ['password', 'token', 'key', 'secret', 'authorization'];
+      const sensitiveKeys = [
+        'password', 'token', 'key', 'secret', 'authorization',
+        'api_key', 'apiKey', 'auth'
+      ];
       
       Object.keys(sanitized).forEach(key => {
         if (sensitiveKeys.some(k => key.toLowerCase().includes(k))) {
@@ -82,7 +96,7 @@ class Logger {
       });
 
       return sanitized;
-    } catch (error) {
+    } catch {
       return '[Error sanitizing log data]';
     }
   }

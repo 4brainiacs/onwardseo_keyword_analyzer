@@ -43,7 +43,8 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
             'Failed to analyze webpage',
             500,
             error instanceof Error ? error.message : 'An unexpected error occurred',
-            true
+            true,
+            5000
           );
 
       setError(analysisError);

@@ -24,7 +24,18 @@ export default defineConfig({
       '/.netlify/functions': {
         target: 'http://localhost:8888',
         changeOrigin: true,
-        secure: false
+        secure: false,
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
+            console.error('Proxy error:', err);
+          });
+          proxy.on('proxyReq', (proxyReq) => {
+            proxyReq.setHeader('Content-Type', 'application/json');
+          });
+          proxy.on('proxyRes', (proxyRes) => {
+            proxyRes.headers['content-type'] = 'application/json';
+          });
+        }
       }
     }
   },

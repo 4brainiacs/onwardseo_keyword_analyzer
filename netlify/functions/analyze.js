@@ -10,17 +10,14 @@ export const handler = async (event) => {
     'Content-Type': 'application/json'
   };
 
-  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return { 
       statusCode: 204, 
-      headers,
-      body: ''
+      headers
     };
   }
 
   try {
-    // Validate HTTP method
     if (event.httpMethod !== 'POST') {
       return {
         statusCode: 405,
@@ -33,23 +30,22 @@ export const handler = async (event) => {
       };
     }
 
-    // Parse and validate request body
     let body;
     try {
       body = JSON.parse(event.body || '{}');
     } catch (error) {
+      logger.error('Request body parse error:', error);
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'Invalid request body',
+          error: 'Invalid request format',
           details: 'Request body must be valid JSON'
         })
       };
     }
 
-    // Validate URL parameter
     const { url } = body;
     if (!url) {
       return {
@@ -57,12 +53,12 @@ export const handler = async (event) => {
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'URL is required'
+          error: 'Missing URL',
+          details: 'URL parameter is required'
         })
       };
     }
 
-    // Validate URL format
     const urlValidation = validateUrl(url);
     if (!urlValidation.isValid) {
       return {
@@ -70,15 +66,18 @@ export const handler = async (event) => {
         headers,
         body: JSON.stringify({
           success: false,
-          error: urlValidation.error
+          error: 'Invalid URL',
+          details: urlValidation.error
         })
       };
     }
 
-    // Perform analysis
     logger.info('Starting analysis:', { url });
     const result = await analyzeContent(url);
-    logger.info('Analysis completed successfully');
+
+    if (!result) {
+      throw new Error('Analysis produced no results');
+    }
 
     return {
       statusCode: 200,
@@ -88,6 +87,7 @@ export const handler = async (event) => {
         data: result
       })
     };
+
   } catch (error) {
     logger.error('Analysis error:', error);
 

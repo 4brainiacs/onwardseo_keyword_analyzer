@@ -9,6 +9,10 @@ const envSchema = z.object({
     isDev: z.boolean(),
     isProd: z.boolean(),
     isTest: z.boolean()
+  }),
+  scrapingBee: z.object({
+    apiKey: z.string().optional(),
+    baseUrl: z.string().url()
   })
 });
 
@@ -18,7 +22,7 @@ function getApiUrl(): string {
   if (typeof window !== 'undefined' && window.__RUNTIME_CONFIG__?.VITE_API_URL) {
     return window.__RUNTIME_CONFIG__.VITE_API_URL;
   }
-  return import.meta.env.VITE_API_URL || '/.netlify/functions';
+  return import.meta.env.VITE_API_URL || '/api';
 }
 
 function validateEnvironment(): Environment {
@@ -33,6 +37,10 @@ function validateEnvironment(): Environment {
       isDev: mode === 'development',
       isProd: mode === 'production',
       isTest: mode === 'test'
+    },
+    scrapingBee: {
+      apiKey: import.meta.env.VITE_SCRAPINGBEE_API_KEY,
+      baseUrl: 'https://app.scrapingbee.com/api/v1'
     }
   };
 

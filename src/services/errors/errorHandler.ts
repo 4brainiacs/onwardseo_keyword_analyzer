@@ -1,4 +1,3 @@
-```typescript
 import { BaseError, AnalysisError, NetworkError, ServerError } from './types';
 import { logger } from '../../utils/logger';
 import { ErrorReporter } from './errorReporter';
@@ -67,4 +66,3 @@ export class ErrorHandler {
     return 5000;
   }
 }
-```

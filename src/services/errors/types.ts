@@ -9,7 +9,7 @@ export class BaseError extends Error {
     public readonly context?: Record<string, unknown>
   ) {
     super(message);
-    this.name = this.constructor.name;
+    this.name = 'BaseError';
     Error.captureStackTrace(this, this.constructor);
   }
 

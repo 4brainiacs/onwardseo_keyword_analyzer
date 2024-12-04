@@ -1,6 +1,5 @@
-```typescript
 export const API_DEFAULTS = {
-  BASE_URL: '/.netlify/functions',
+  BASE_URL: '/api',
   TIMEOUT: 30000,
   MAX_RETRIES: 3,
   RETRY_DELAY: 1000,
@@ -31,4 +30,3 @@ export const CONTENT_TYPES = {
   JSON: 'application/json',
   HTML: 'text/html'
 } as const;
-```

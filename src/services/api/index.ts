@@ -7,7 +7,7 @@ export async function analyzeUrl(url: string): Promise<AnalysisResult> {
   try {
     logger.info('Starting URL analysis', { url });
     
-    const result = await apiClient.request<AnalysisResult>('/analyze', {
+    const result = await apiClient.request<AnalysisResult>('/api/analyze', {
       method: 'POST',
       body: JSON.stringify({ url }),
       retries: 3,

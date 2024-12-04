@@ -1,4 +1,5 @@
 import { API_DEFAULTS } from '../constants';
+import { AnalysisError } from '../../errors';
 
 export function calculateRetryDelay(attempt: number, baseDelay = API_DEFAULTS.RETRY_DELAY): number {
   const delay = Math.min(
@@ -13,6 +14,10 @@ export function calculateRetryDelay(attempt: number, baseDelay = API_DEFAULTS.RE
 export function shouldRetry(error: unknown, attempt: number): boolean {
   if (attempt >= API_DEFAULTS.MAX_RETRIES) {
     return false;
+  }
+
+  if (error instanceof AnalysisError) {
+    return error.retryable;
   }
 
   if (error instanceof Error) {

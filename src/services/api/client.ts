@@ -1,36 +1,44 @@
-```typescript
 import { env } from '../../config/environment';
 import { logger } from '../../utils/logger';
 import { AnalysisError } from '../errors';
 import { validateResponse } from './validators/responseValidator';
 import { buildRequest } from './utils/requestBuilder';
 import { calculateRetryDelay, shouldRetry } from './utils/retry';
+import { API_DEFAULTS } from './constants';
 import type { ApiResponse, RequestConfig } from './types';
 
 export class ApiClient {
-  private baseUrl: string;
-
-  constructor() {
-    this.baseUrl = env.api.baseUrl;
-  }
+  constructor(private baseUrl: string = '/.netlify/functions') {}
 
   async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
     let attempt = 0;
-    const maxAttempts = config.retries ?? 3;
+    const maxAttempts = config.retries ?? API_DEFAULTS.MAX_RETRIES;
 
     while (attempt < maxAttempts) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), config.timeout ?? 30000);
+        const timeout = setTimeout(
+          () => controller.abort(), 
+          config.timeout ?? API_DEFAULTS.TIMEOUT
+        );
 
-        const response = await fetch(`${this.baseUrl}${endpoint}`, buildRequest({
+        const url = `${this.baseUrl}${endpoint}`;
+        logger.info('Making API request', { url, method: config.method });
+
+        const response = await fetch(url, buildRequest({
           ...config,
-          signal: controller.signal
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            ...config.headers
+          }
         }));
 
         clearTimeout(timeout);
 
         const result = await validateResponse<ApiResponse<T>>(response);
+        logger.info('API request successful', { url });
         return result.data;
       } catch (error) {
         attempt++;
@@ -65,4 +73,3 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient();
-```
