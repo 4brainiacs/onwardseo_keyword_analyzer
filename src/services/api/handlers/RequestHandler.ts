@@ -1,85 +1,65 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
 import { API_CONSTANTS } from '../constants';
+import type { RequestConfig } from '../types';
 
 export class RequestHandler {
-  async sendRequest<T>(url: string, options: RequestInit): Promise<T> {
+  async sendRequest(url: string, config: RequestConfig): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      API_CONSTANTS.TIMEOUTS.DEFAULT
-    );
+    const timeout = config.timeout || API_CONSTANTS.TIMEOUTS.DEFAULT;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      logger.info('Making API request', { url, method: options.method });
+      logger.debug('Making request', {
+        url,
+        method: config.method,
+        timeout
+      });
 
       const response = await fetch(url, {
-        ...options,
+        ...config,
         signal: controller.signal,
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...options.headers
+          ...API_CONSTANTS.HEADERS,
+          ...config.headers,
+          [API_CONSTANTS.HEADERS.REQUEST_ID]: crypto.randomUUID()
         }
       });
 
-      // Read response text immediately to avoid timing issues
-      const text = await response.text();
-      
-      logger.debug('Response received', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        bodyPreview: text.slice(0, 200)
-      });
-
-      // Validate content type
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        throw new AnalysisError(
-          'Invalid content type',
-          415,
-          `Expected JSON but received: ${contentType}`,
-          false
-        );
+      if (!response.ok) {
+        const status = response.status;
+        throw new AnalysisError({
+          message: `HTTP ${status}`,
+          status,
+          details: response.statusText || `Server returned status ${status}`,
+          retryable: status >= 500 || status === 429,
+          retryAfter: status === 429 ? 
+            Number(response.headers.get(API_CONSTANTS.HEADERS.RETRY_AFTER)) * 1000 : 
+            undefined
+        });
       }
 
-      // Parse JSON response
-      let data: T;
-      try {
-        data = JSON.parse(text);
-      } catch (error) {
-        logger.error('JSON parse error:', { error, text: text.slice(0, 200) });
-        throw new AnalysisError(
-          'Invalid JSON response',
-          500,
-          'Server returned invalid JSON data',
-          true
-        );
-      }
-
-      return data;
+      return response;
     } catch (error) {
       if (error instanceof AnalysisError) {
         throw error;
       }
 
       if (error.name === 'AbortError') {
-        throw new AnalysisError(
-          'Request timeout',
-          408,
-          'The request took too long to complete',
-          true
-        );
+        throw new AnalysisError({
+          message: API_CONSTANTS.NETWORK.TIMEOUT,
+          status: 408,
+          details: `Request timed out after ${timeout}ms`,
+          retryable: true
+        });
       }
 
-      logger.error('Request failed:', error);
-      throw new AnalysisError(
-        'Request failed',
-        500,
-        error instanceof Error ? error.message : 'An unexpected error occurred',
-        true
-      );
+      throw new AnalysisError({
+        message: API_CONSTANTS.NETWORK.CONNECTION,
+        status: 503,
+        details: error instanceof Error ? error.message : 'Failed to connect to server',
+        retryable: true
+      });
     } finally {
       clearTimeout(timeoutId);
     }

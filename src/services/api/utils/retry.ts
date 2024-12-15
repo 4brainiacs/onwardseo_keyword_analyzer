@@ -6,39 +6,56 @@ export class RetryHandler {
 
   async execute<T>(
     operation: () => Promise<T>,
-    context: string
+    context: string,
+    attempt: number = 0
   ): Promise<T> {
-    let attempt = 0;
-    let lastError: Error | null = null;
-
-    while (attempt < this.config.maxAttempts) {
-      try {
-        return await operation();
-      } catch (error) {
-        lastError = error as Error;
-        attempt++;
-
-        if (!this.config.shouldRetry(error, attempt)) {
-          throw error;
-        }
-
-        const delay = this.calculateDelay(attempt);
-        logger.warn(`Retrying ${context} (${attempt}/${this.config.maxAttempts}) after ${delay}ms`, {
-          error: error instanceof Error ? error.message : 'Unknown error',
-          attempt,
-          delay
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt >= this.config.maxAttempts) {
+        logger.error(`Max retry attempts (${this.config.maxAttempts}) reached for ${context}`, {
+          error,
+          attempt
         });
-
-        await this.sleep(delay);
+        throw error;
       }
-    }
 
-    throw lastError;
+      if (!this.isRetryableError(error)) {
+        logger.error(`Non-retryable error for ${context}`, { error });
+        throw error;
+      }
+
+      const delay = this.calculateDelay(error, attempt);
+      logger.info(`Retrying ${context} (attempt ${attempt + 1}/${this.config.maxAttempts}) after ${delay}ms`);
+      
+      await this.sleep(delay);
+      return this.execute(operation, context, attempt + 1);
+    }
   }
 
-  private calculateDelay(attempt: number): number {
-    const exponentialDelay = this.config.initialDelay * Math.pow(2, attempt - 1);
-    const jitter = Math.random() * 1000;
+  private isRetryableError(error: unknown): boolean {
+    if (error instanceof Error) {
+      // Check for specific error properties
+      const status = (error as any).status;
+      if (status) {
+        return status >= 500 || status === 429;
+      }
+
+      // Check for retryable flag
+      return (error as any).retryable === true;
+    }
+    return false;
+  }
+
+  private calculateDelay(error: unknown, attempt: number): number {
+    // Use retry-after header if available
+    if (error instanceof Error && (error as any).retryAfter) {
+      return Math.min((error as any).retryAfter, this.config.maxDelay);
+    }
+
+    // Exponential backoff with jitter
+    const exponentialDelay = this.config.baseDelay * Math.pow(2, attempt);
+    const jitter = Math.random() * (this.config.baseDelay * 0.1); // 10% jitter
     return Math.min(exponentialDelay + jitter, this.config.maxDelay);
   }
 

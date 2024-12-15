@@ -11,7 +11,6 @@ export class ApiClient {
   private responseHandler: ResponseHandler;
 
   constructor() {
-    // Get API URL from runtime config or fallback
     this.baseUrl = window.__RUNTIME_CONFIG__?.VITE_API_URL || '/.netlify/functions';
     this.requestHandler = new RequestHandler();
     this.responseHandler = new ResponseHandler();
@@ -35,13 +34,13 @@ export class ApiClient {
 
       return await this.responseHandler.handleResponse<AnalysisResult>(response);
     } catch (error) {
-      logger.error('API request failed:', { error, url });
-      throw error instanceof AnalysisError ? error : new AnalysisError(
-        'Request failed',
-        500,
-        error instanceof Error ? error.message : 'An unexpected error occurred',
-        true
-      );
+      logger.error('API request failed', { error });
+      throw error instanceof AnalysisError ? error : new AnalysisError({
+        message: 'Request failed',
+        status: 500,
+        details: error instanceof Error ? error.message : 'An unexpected error occurred',
+        retryable: true
+      });
     }
   }
 }

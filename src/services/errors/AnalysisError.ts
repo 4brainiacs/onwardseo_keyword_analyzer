@@ -1,28 +1,31 @@
-import { logger } from '../../utils/logger';
+export interface ErrorMetadata {
+  message: string;
+  status?: number;
+  details?: string;
+  retryable?: boolean;
+  retryAfter?: number;
+  requestId?: string;
+  context?: Record<string, unknown>;
+}
 
 export class AnalysisError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number = 500,
-    public readonly details?: string,
-    public readonly retryable: boolean = false,
-    public readonly retryAfter: number = 5000,
-    public readonly requestId?: string
-  ) {
-    super(message);
+  readonly status: number;
+  readonly details?: string;
+  readonly retryable: boolean;
+  readonly retryAfter: number;
+  readonly requestId?: string;
+  readonly context?: Record<string, unknown>;
+
+  constructor(metadata: ErrorMetadata) {
+    super(metadata.message);
     this.name = 'AnalysisError';
+    this.status = metadata.status ?? 500;
+    this.details = metadata.details;
+    this.retryable = metadata.retryable ?? false;
+    this.retryAfter = metadata.retryAfter ?? 5000;
+    this.requestId = metadata.requestId;
+    this.context = metadata.context;
     Error.captureStackTrace(this, this.constructor);
-    
-    // Log error creation
-    logger.error('Analysis error created:', {
-      message,
-      status,
-      details,
-      retryable,
-      retryAfter,
-      requestId,
-      stack: this.stack
-    });
   }
 
   toJSON() {
@@ -34,20 +37,8 @@ export class AnalysisError extends Error {
       retryable: this.retryable,
       retryAfter: this.retryAfter,
       requestId: this.requestId,
+      context: this.context,
       stack: this.stack
     };
-  }
-
-  static fromError(error: unknown): AnalysisError {
-    if (error instanceof AnalysisError) {
-      return error;
-    }
-
-    return new AnalysisError(
-      error instanceof Error ? error.message : 'An unexpected error occurred',
-      500,
-      undefined,
-      true
-    );
   }
 }

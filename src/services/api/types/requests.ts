@@ -1,4 +1,3 @@
-```typescript
 export interface RequestConfig extends RequestInit {
   timeout?: number;
   retries?: number;
@@ -8,7 +7,7 @@ export interface RequestConfig extends RequestInit {
 
 export interface RetryConfig {
   maxAttempts: number;
-  initialDelay: number;
+  baseDelay: number;
   maxDelay: number;
   shouldRetry: (error: unknown, attempt: number) => boolean;
 }
@@ -19,4 +18,3 @@ export interface ApiClientConfig {
   retryConfig: RetryConfig;
   headers?: Record<string, string>;
 }
-```

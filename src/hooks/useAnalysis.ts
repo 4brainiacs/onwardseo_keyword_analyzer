@@ -19,7 +19,7 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
       setIsLoading(true);
       setError(null);
 
-      logger.info('Starting analysis:', { url });
+      logger.info('Starting analysis', { url });
       
       const data = await apiClient.analyze(url);
       
@@ -30,12 +30,12 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
     } catch (error) {
       const analysisError = error instanceof AnalysisError 
         ? error 
-        : new AnalysisError(
-            'Analysis failed',
-            500,
-            error instanceof Error ? error.message : 'An unexpected error occurred',
-            true
-          );
+        : new AnalysisError({
+            message: 'Analysis failed',
+            status: 500,
+            details: error instanceof Error ? error.message : 'An unexpected error occurred',
+            retryable: true
+          });
 
       logger.error('Analysis failed:', {
         error: analysisError,

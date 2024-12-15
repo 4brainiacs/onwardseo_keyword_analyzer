@@ -1,4 +1,4 @@
-import type { Environment } from './environment';
+import { Environment } from './environment';
 
 export function validateEnvironment(): Environment {
   const apiKey = import.meta.env.VITE_SCRAPINGBEE_API_KEY || '';
@@ -9,6 +9,9 @@ export function validateEnvironment(): Environment {
   }
 
   return {
+    api: {
+      baseUrl: import.meta.env.VITE_API_URL || '/.netlify/functions'
+    },
     scrapingBee: {
       apiKey,
       baseUrl: 'https://app.scrapingbee.com/api/v1'

@@ -1,49 +1,35 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS, ERROR_MESSAGES } from '../constants';
 
-export class ResponseValidator {
-  validateContentType(response: Response): void {
-    const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
-    
-    if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
+export async function validateResponse<T>(response: Response, text: string): Promise<T> {
+  try {
+    // Validate content type
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
       logger.error('Invalid content type:', { contentType });
       throw new AnalysisError(
-        ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
-        415,
-        `Expected JSON but received: ${contentType}`,
-        false
-      );
-    }
-  }
-
-  async validateResponseBody<T>(response: Response): Promise<T> {
-    const text = await response.text();
-    
-    if (!text.trim()) {
-      throw new AnalysisError(
-        ERROR_MESSAGES.VALIDATION.EMPTY_RESPONSE,
+        'Invalid content type',
         500,
-        'Server returned empty response',
+        `Expected JSON but received: ${contentType}`,
         true
       );
     }
 
+    // Parse JSON response
+    let data: T;
     try {
-      const data = JSON.parse(text);
-      return this.validateApiResponse(data);
+      data = JSON.parse(text);
     } catch (error) {
-      logger.error('JSON parse error:', { error, responseText: text.slice(0, 200) });
+      logger.error('JSON parse error:', { error, text: text.slice(0, 200) });
       throw new AnalysisError(
-        ERROR_MESSAGES.VALIDATION.INVALID_JSON,
+        'Invalid JSON response',
         500,
         'Server returned invalid JSON data',
         true
       );
     }
-  }
 
-  private validateApiResponse<T>(data: unknown): T {
+    // Validate response structure
     if (!data || typeof data !== 'object') {
       throw new AnalysisError(
         'Invalid response format',
@@ -53,17 +39,18 @@ export class ResponseValidator {
       );
     }
 
-    const response = data as any;
-    if (!response.success || !response.data) {
-      throw new AnalysisError(
-        response.error || 'Request failed',
-        response.status || 500,
-        response.details || 'Server returned unsuccessful response',
-        response.retryable ?? false,
-        response.retryAfter ?? API_CONSTANTS.TIMEOUTS.RETRY
-      );
+    return data;
+  } catch (error) {
+    if (error instanceof AnalysisError) {
+      throw error;
     }
 
-    return response.data;
+    logger.error('Response validation failed:', error);
+    throw new AnalysisError(
+      'Invalid response',
+      500,
+      error instanceof Error ? error.message : 'An unexpected error occurred',
+      true
+    );
   }
 }

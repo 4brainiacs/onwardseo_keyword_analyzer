@@ -1,10 +1,9 @@
-```typescript
 import { StatusCodes } from 'http-status-codes';
 import type { ApiClientConfig, RetryConfig } from '../types/requests';
 
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxAttempts: 3,
-  initialDelay: 1000,
+  baseDelay: 1000,
   maxDelay: 10000,
   shouldRetry: (error: unknown, attempt: number) => {
     if (attempt >= 3) return false;
@@ -40,4 +39,3 @@ export const ERROR_CODES = {
   SERVER_ERROR: 'SERVER_ERROR',
   VALIDATION_ERROR: 'VALIDATION_ERROR'
 } as const;
-```

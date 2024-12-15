@@ -1,60 +1,88 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
+import { API_CONSTANTS } from '../constants';
+import type { ApiResponse } from '../types';
 
 export class ResponseHandler {
   async handleResponse<T>(response: Response): Promise<T> {
     try {
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
-        throw new AnalysisError(
-          'Invalid content type',
-          415,
-          `Expected JSON but received: ${contentType}`,
-          false
-        );
-      }
-
+      await this.validateContentType(response);
       const text = await response.text();
+      
       if (!text.trim()) {
-        throw new AnalysisError(
-          'Empty response',
-          500,
-          'Server returned empty response',
-          true
-        );
+        throw new AnalysisError({
+          message: API_CONSTANTS.VALIDATION.EMPTY_RESPONSE,
+          status: 500,
+          details: 'Server returned empty response',
+          retryable: true
+        });
       }
 
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (error) {
-        throw new AnalysisError(
-          'Invalid JSON response',
-          500,
-          'Server returned invalid JSON data',
-          true
-        );
-      }
-
-      if (!data.success || !data.data) {
-        throw new AnalysisError(
-          data.error || 'Request failed',
-          data.status || 500,
-          data.details || 'Server returned unsuccessful response',
-          data.retryable || false,
-          data.retryAfter
-        );
-      }
-
-      return data.data;
+      const data = await this.parseJsonResponse(text);
+      return this.validateApiResponse<T>(data);
     } catch (error) {
       logger.error('Response handling failed:', error);
-      throw error instanceof AnalysisError ? error : new AnalysisError(
-        'Failed to process response',
-        500,
-        error instanceof Error ? error.message : 'An unexpected error occurred',
-        true
-      );
+      throw error instanceof AnalysisError ? error : new AnalysisError({
+        message: 'Failed to process response',
+        status: 500,
+        details: error instanceof Error ? error.message : 'An unexpected error occurred',
+        retryable: true
+      });
     }
+  }
+
+  private async validateContentType(response: Response): Promise<void> {
+    const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
+    if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
+      throw new AnalysisError({
+        message: API_CONSTANTS.VALIDATION.INVALID_CONTENT,
+        status: 415,
+        details: `Expected JSON but received: ${contentType}`,
+        retryable: false
+      });
+    }
+  }
+
+  private async parseJsonResponse(text: string): Promise<unknown> {
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      throw new AnalysisError({
+        message: API_CONSTANTS.VALIDATION.INVALID_JSON,
+        status: 500,
+        details: 'Server returned invalid JSON data',
+        retryable: true
+      });
+    }
+  }
+
+  private validateApiResponse<T>(data: unknown): T {
+    if (!this.isValidApiResponse(data)) {
+      throw new AnalysisError({
+        message: API_CONSTANTS.VALIDATION.INVALID_RESPONSE,
+        status: 500,
+        details: 'Server returned unexpected data format',
+        retryable: true
+      });
+    }
+
+    if (!data.success) {
+      throw new AnalysisError({
+        message: data.error,
+        status: data.status || 500,
+        details: data.details,
+        retryable: data.retryable ?? false,
+        retryAfter: data.retryAfter
+      });
+    }
+
+    return data.data;
+  }
+
+  private isValidApiResponse(data: unknown): data is ApiResponse<unknown> {
+    if (!data || typeof data !== 'object') return false;
+    const response = data as Partial<ApiResponse<unknown>>;
+    return typeof response.success === 'boolean' && 
+           (response.success ? 'data' in response : 'error' in response);
   }
 }

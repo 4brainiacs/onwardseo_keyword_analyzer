@@ -16,7 +16,8 @@ export const API_CONSTANTS = {
   HEADERS: {
     CONTENT_TYPE: 'Content-Type',
     ACCEPT: 'Accept',
-    RETRY_AFTER: 'Retry-After'
+    RETRY_AFTER: 'Retry-After',
+    REQUEST_ID: 'X-Request-ID'
   },
   CONTENT_TYPES: {
     JSON: 'application/json',
@@ -34,7 +35,8 @@ export const ERROR_MESSAGES = {
     INVALID_JSON: 'Invalid JSON response',
     INVALID_CONTENT: 'Invalid content type',
     EMPTY_RESPONSE: 'Empty response received',
-    MALFORMED_RESPONSE: 'Malformed response received'
+    MALFORMED_RESPONSE: 'Malformed response received',
+    MISSING_CONTENT_TYPE: 'Missing content type header'
   },
   SERVER: {
     INTERNAL_ERROR: 'Internal server error',
