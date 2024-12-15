@@ -1,45 +1,48 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_ENDPOINTS } from '../config/endpoints';
-import { RequestHandler } from '../handlers/RequestHandler';
-import { ResponseHandler } from '../handlers/ResponseHandler';
-import { RetryHandler } from '../handlers/RetryHandler';
+import { API_CONSTANTS } from '../constants';
+import { RequestHandler } from './RequestHandler';
+import { ResponseHandler } from './ResponseHandler';
 import type { AnalysisResult } from '../../../types';
 
 export class ApiClient {
+  private baseUrl: string;
   private requestHandler: RequestHandler;
   private responseHandler: ResponseHandler;
-  private retryHandler: RetryHandler;
 
   constructor() {
+    // Get API URL from runtime config or fallback
+    this.baseUrl = window.__RUNTIME_CONFIG__?.VITE_API_URL || '/.netlify/functions';
     this.requestHandler = new RequestHandler();
     this.responseHandler = new ResponseHandler();
-    this.retryHandler = new RetryHandler({
-      maxAttempts: 3,
-      baseDelay: 2000,
-      maxDelay: 10000
-    });
   }
 
   async analyze(url: string): Promise<AnalysisResult> {
-    return this.retryHandler.execute(async () => {
-      try {
-        logger.info('Starting analysis', { url });
+    try {
+      logger.info('Starting analysis', { url });
 
-        const response = await this.requestHandler.sendRequest(
-          API_ENDPOINTS.analyze,
-          {
-            method: 'POST',
-            body: JSON.stringify({ url })
-          }
-        );
+      const response = await this.requestHandler.sendRequest(
+        `${this.baseUrl}/analyze`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': API_CONSTANTS.CONTENT_TYPES.JSON,
+            'Accept': API_CONSTANTS.CONTENT_TYPES.JSON
+          },
+          body: JSON.stringify({ url })
+        }
+      );
 
-        return await this.responseHandler.handleResponse<AnalysisResult>(response);
-      } catch (error) {
-        logger.error('API request failed:', { error, url });
-        throw AnalysisError.fromError(error);
-      }
-    }, 'analysis');
+      return await this.responseHandler.handleResponse<AnalysisResult>(response);
+    } catch (error) {
+      logger.error('API request failed:', { error, url });
+      throw error instanceof AnalysisError ? error : new AnalysisError(
+        'Request failed',
+        500,
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        true
+      );
+    }
   }
 }
 

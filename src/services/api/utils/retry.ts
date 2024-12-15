@@ -1,6 +1,5 @@
-```typescript
 import { logger } from '../../../utils/logger';
-import type { RetryConfig } from '../types/requests';
+import type { RetryConfig } from '../types';
 
 export class RetryHandler {
   constructor(private config: RetryConfig) {}
@@ -47,4 +46,3 @@ export class RetryHandler {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
-```

@@ -1,41 +1,34 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { ERROR_MESSAGES } from '../constants';
-import type { ApiResponse } from '../types';
+import { API_CONSTANTS, ERROR_MESSAGES } from '../constants';
 
 export class ResponseHandler {
-  async handleResponse<T>(response: Response, text: string): Promise<T> {
+  async handleResponse<T>(response: Response): Promise<T> {
     try {
-      // Log raw response for debugging
-      logger.debug('Raw response:', {
-        status: response.status,
-        statusText: response.statusText,
-        contentType: response.headers.get('content-type'),
-        bodyPreview: text.slice(0, 200)
-      });
-
-      // Check for empty response
-      if (!text || !text.trim()) {
-        logger.error('Empty response received');
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
         throw new AnalysisError(
-          'Empty response',
+          ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
+          415,
+          `Expected JSON but received: ${contentType}`,
+          false
+        );
+      }
+
+      const text = await response.text();
+      if (!text.trim()) {
+        throw new AnalysisError(
+          ERROR_MESSAGES.VALIDATION.EMPTY_RESPONSE,
           500,
-          'Server returned an empty response',
+          'Server returned empty response',
           true
         );
       }
 
-      // Parse JSON response
-      let data: ApiResponse<T>;
+      let data;
       try {
         data = JSON.parse(text);
-        logger.debug('Parsed response:', data);
       } catch (error) {
-        logger.error('JSON parse error:', { 
-          error, 
-          responseText: text.slice(0, 200),
-          contentType: response.headers.get('content-type')
-        });
         throw new AnalysisError(
           ERROR_MESSAGES.VALIDATION.INVALID_JSON,
           500,
@@ -44,47 +37,20 @@ export class ResponseHandler {
         );
       }
 
-      // Validate response structure
-      if (!data || typeof data !== 'object') {
-        logger.error('Invalid response format:', { data });
-        throw new AnalysisError(
-          'Invalid response format',
-          500,
-          'Server returned unexpected data format',
-          true
-        );
-      }
-
-      // Check for API error response
       if (!data.success || !data.data) {
-        logger.error('API error response:', data);
         throw new AnalysisError(
-          data.error || 'Request failed',
-          response.status,
+          data.error || ERROR_MESSAGES.VALIDATION.MALFORMED_RESPONSE,
+          data.status || 500,
           data.details || 'Server returned unsuccessful response',
-          data.retryable || false,
-          data.retryAfter || 5000
-        );
-      }
-
-      // Validate data is not empty
-      if (typeof data.data === 'object' && !Object.keys(data.data).length) {
-        throw new AnalysisError(
-          'Empty response data',
-          500,
-          'Server returned empty data object',
-          true
+          data.retryable ?? false,
+          data.retryAfter
         );
       }
 
       return data.data;
     } catch (error) {
-      if (error instanceof AnalysisError) {
-        throw error;
-      }
-
       logger.error('Response handling failed:', error);
-      throw new AnalysisError(
+      throw error instanceof AnalysisError ? error : new AnalysisError(
         'Failed to process response',
         500,
         error instanceof Error ? error.message : 'An unexpected error occurred',

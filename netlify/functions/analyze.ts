@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import { analyzeContent } from './services/analyzer';
 import { logger } from './utils/logger';
-import { validateUrl } from './utils/validators';
 
 const app = express();
 
@@ -23,15 +22,6 @@ app.post('/analyze', async (req, res) => {
         success: false,
         error: 'URL is required',
         details: 'Please provide a URL to analyze'
-      });
-    }
-
-    const urlValidation = validateUrl(url);
-    if (!urlValidation.isValid) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid URL',
-        details: urlValidation.error
       });
     }
 

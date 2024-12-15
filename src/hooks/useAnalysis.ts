@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '../services/api/client';
+import { apiClient } from '../services/api/client/ApiClient';
 import { AnalysisError } from '../services/errors';
 import { logger } from '../utils/logger';
 import type { AnalysisResult } from '../types';
@@ -15,10 +15,10 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
   const [result, setResult] = useState<AnalysisResult | null>(null);
 
   const analyze = useCallback(async (url: string) => {
-    setIsLoading(true);
-    setError(null);
-
     try {
+      setIsLoading(true);
+      setError(null);
+
       logger.info('Starting analysis:', { url });
       
       const data = await apiClient.analyze(url);
@@ -30,7 +30,12 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
     } catch (error) {
       const analysisError = error instanceof AnalysisError 
         ? error 
-        : AnalysisError.fromError(error);
+        : new AnalysisError(
+            'Analysis failed',
+            500,
+            error instanceof Error ? error.message : 'An unexpected error occurred',
+            true
+          );
 
       logger.error('Analysis failed:', {
         error: analysisError,

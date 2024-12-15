@@ -12,12 +12,16 @@ export class AnalysisError extends Error {
     super(message);
     this.name = 'AnalysisError';
     Error.captureStackTrace(this, this.constructor);
-    this.logError();
-  }
-
-  private logError(): void {
-    logger.error(this.message, {
-      error: this.toJSON()
+    
+    // Log error creation
+    logger.error('Analysis error created:', {
+      message,
+      status,
+      details,
+      retryable,
+      retryAfter,
+      requestId,
+      stack: this.stack
     });
   }
 
@@ -39,19 +43,10 @@ export class AnalysisError extends Error {
       return error;
     }
 
-    if (error instanceof Error) {
-      return new AnalysisError(
-        error.message,
-        500,
-        error.stack,
-        true
-      );
-    }
-
     return new AnalysisError(
-      'An unexpected error occurred',
+      error instanceof Error ? error.message : 'An unexpected error occurred',
       500,
-      String(error),
+      undefined,
       true
     );
   }
