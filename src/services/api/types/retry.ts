@@ -15,5 +15,3 @@ export interface RetryOptions {
   shouldRetry?: (error: unknown, context: RetryContext) => boolean;
   onRetry?: (context: RetryContext) => void;
 }
-
-export type { RetryConfig as default };

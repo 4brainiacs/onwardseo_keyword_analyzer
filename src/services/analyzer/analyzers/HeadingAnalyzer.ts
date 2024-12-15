@@ -1,4 +1,4 @@
-import type { CheerioAPI, Element } from 'cheerio';
+import type { CheerioAPI } from 'cheerio';
 import { logger } from '../../../utils/logger';
 import type { PageHeadings } from '../../../types';
 
@@ -12,15 +12,20 @@ export class HeadingAnalyzer {
         h4: this.extractHeadingsByTag($, 'h4')
       };
     } catch (error) {
-      logger.error('Heading extraction failed:', { error });
+      logger.error('Heading extraction failed:', error);
       return { h1: [], h2: [], h3: [], h4: [] };
     }
   }
 
   private extractHeadingsByTag($: CheerioAPI, tag: string): string[] {
-    return $(tag)
-      .map((index: number, element: Element): string => $(element).text().trim())
-      .get()
-      .filter((text: string): boolean => text.length > 0);
+    try {
+      return $(tag)
+        .map((_, element): string => $(element).text().trim())
+        .get()
+        .filter((text): text is string => Boolean(text));
+    } catch (error) {
+      logger.error(`Failed to extract ${tag} headings:`, error);
+      return [];
+    }
   }
 }

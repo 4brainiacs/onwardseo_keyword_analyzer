@@ -1,7 +1,7 @@
 import { ApiClient } from './ApiClient';
+import { API_CONFIG } from '../../../config/api';
 import { RequestHandler } from '../handlers/RequestHandler';
 import { ResponseHandler } from '../handlers/ResponseHandler';
-import { API_CONFIG } from '../../../config/api';
 
 // Create instances of required dependencies
 const requestHandler = new RequestHandler();

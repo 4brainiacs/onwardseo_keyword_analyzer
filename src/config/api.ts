@@ -3,10 +3,13 @@ import { z } from 'zod';
 const apiConfigSchema = z.object({
   baseUrl: z.string().min(1),
   timeout: z.number().min(1000),
-  retries: z.number().min(0)
+  retries: z.number().min(0),
+  retryConfig: z.object({
+    maxAttempts: z.number().min(1),
+    baseDelay: z.number().min(100),
+    maxDelay: z.number().min(1000)
+  })
 });
-
-export type ApiConfig = z.infer<typeof apiConfigSchema>;
 
 function getBaseUrl(): string {
   // First check runtime config
@@ -25,8 +28,15 @@ function getBaseUrl(): string {
     : '/.netlify/functions';
 }
 
-export const API_CONFIG: ApiConfig = {
+export const API_CONFIG = {
   baseUrl: getBaseUrl(),
   timeout: 30000,
-  retries: import.meta.env.PROD ? 3 : 1
+  retries: import.meta.env.PROD ? 3 : 1,
+  retryConfig: {
+    maxAttempts: import.meta.env.PROD ? 3 : 1,
+    baseDelay: 2000,
+    maxDelay: 10000
+  }
 };
+
+export type ApiConfig = z.infer<typeof apiConfigSchema>;

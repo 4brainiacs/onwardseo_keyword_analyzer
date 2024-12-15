@@ -1,4 +1,13 @@
-import { BaseError, ErrorMetadata } from '../core/BaseError';
+import { BaseError } from '../core/BaseError';
+
+interface ErrorOptions {
+  code?: string;
+  status?: number;
+  details?: string;
+  retryable?: boolean;
+  retryAfter?: number;
+  requestId?: string;
+}
 
 export class AnalysisError extends BaseError {
   static readonly CODES = {
@@ -9,24 +18,11 @@ export class AnalysisError extends BaseError {
     SERVER_ERROR: 'SERVER_ERROR'
   } as const;
 
-  constructor(message: string, metadata: ErrorMetadata = {}) {
+  constructor(message: string, options: ErrorOptions = {}) {
     super(message, {
-      ...metadata,
-      code: metadata.code ?? AnalysisError.CODES.SERVER_ERROR
+      ...options,
+      code: options.code ?? AnalysisError.CODES.SERVER_ERROR
     });
-  }
-
-  toJSON() {
-    return {
-      name: this.name,
-      message: this.message,
-      code: this.code,
-      status: this.status,
-      details: this.details,
-      retryable: this.retryable,
-      retryAfter: this.retryAfter,
-      requestId: this.requestId
-    };
   }
 
   static invalidResponse(details?: string): AnalysisError {

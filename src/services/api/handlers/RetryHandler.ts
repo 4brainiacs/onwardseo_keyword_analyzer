@@ -1,5 +1,5 @@
 import { logger } from '../../../utils/logger';
-import type { RetryConfig, RetryContext } from '../types';
+import type { RetryConfig, RetryContext } from '../types/retry';
 
 export class RetryHandler {
   constructor(private config: RetryConfig) {}

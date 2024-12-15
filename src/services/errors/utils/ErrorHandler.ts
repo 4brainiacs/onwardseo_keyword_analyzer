@@ -1,4 +1,4 @@
-import { BaseError, ErrorMetadata } from '../core/BaseError';
+import { BaseError } from '../core/BaseError';
 import { ApiError } from '../types/ApiError';
 import { AnalysisError } from '../types/AnalysisError';
 import { ValidationError } from '../types/ValidationError';

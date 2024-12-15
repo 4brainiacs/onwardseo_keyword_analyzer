@@ -1,44 +1,43 @@
+import { load } from 'cheerio';
 import { AnalysisError } from '../errors';
 import { logger } from '../../utils/logger';
-import { scrapingService } from '../scraping/scrapingService';
 import type { AnalysisResult } from '../../types';
 import type { 
   KeywordAnalyzer,
   HeadingAnalyzer,
   MetadataAnalyzer,
-  TextAnalyzer 
+  TextProcessor 
 } from './analyzers';
 
 interface ContentAnalyzerDeps {
   keywordAnalyzer: KeywordAnalyzer;
   headingAnalyzer: HeadingAnalyzer;
   metadataAnalyzer: MetadataAnalyzer;
-  textAnalyzer: TextAnalyzer;
+  textProcessor: TextProcessor;
 }
 
 export class ContentAnalyzer {
   constructor(private deps: ContentAnalyzerDeps) {}
 
-  async analyze(url: string): Promise<AnalysisResult> {
+  async analyze(html: string): Promise<AnalysisResult> {
     try {
-      const html = await scrapingService.scrapeWebpage(url);
+      logger.info('Starting content analysis');
+
+      const $ = load(html, {
+        decodeEntities: true,
+        normalizeWhitespace: true
+      });
+
+      // Extract metadata first
+      const { title, metaDescription } = this.deps.metadataAnalyzer.extract($);
       
-      if (!html) {
-        throw new AnalysisError(
-          'Empty response',
-          500,
-          'No content received from webpage',
-          true
-        );
-      }
+      // Extract headings
+      const headings = this.deps.headingAnalyzer.extract($);
 
-      const { cleanText, metadata } = this.deps.textAnalyzer.process(html);
-      logger.debug('Text processing complete', metadata);
+      // Process text content
+      const { cleanText, words } = this.deps.textProcessor.process($);
 
-      const { title, metaDescription } = this.deps.metadataAnalyzer.extract(html);
-      const headings = this.deps.headingAnalyzer.extract(html);
-      const words = cleanText.toLowerCase().split(/\s+/).filter(Boolean);
-
+      // Analyze keywords
       const { 
         twoWordPhrases,
         threeWordPhrases,

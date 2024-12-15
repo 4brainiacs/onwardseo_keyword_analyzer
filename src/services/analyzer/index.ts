@@ -2,26 +2,27 @@ import { ContentAnalyzer } from './ContentAnalyzer';
 import { KeywordAnalyzer } from './analyzers/KeywordAnalyzer';
 import { HeadingAnalyzer } from './analyzers/HeadingAnalyzer';
 import { MetadataAnalyzer } from './analyzers/MetadataAnalyzer';
-import { TextAnalyzer } from './analyzers/TextAnalyzer';
+import { TextProcessor } from './processors/TextProcessor';
 import { logger } from '../../utils/logger';
 import type { AnalysisResult } from '../../types';
 
-export async function analyzeContent(url: string): Promise<AnalysisResult> {
+export async function analyzeContent(html: string): Promise<AnalysisResult> {
   try {
-    logger.info('Starting content analysis', { url });
+    logger.info('Starting content analysis');
     
     const analyzer = new ContentAnalyzer({
       keywordAnalyzer: new KeywordAnalyzer(),
       headingAnalyzer: new HeadingAnalyzer(),
       metadataAnalyzer: new MetadataAnalyzer(),
-      textAnalyzer: new TextAnalyzer()
+      textProcessor: new TextProcessor()
     });
 
-    return await analyzer.analyze(url);
+    return await analyzer.analyze(html);
   } catch (error) {
     logger.error('Analysis failed:', error);
     throw error;
   }
 }
 
-export { ContentAnalyzer, KeywordAnalyzer, HeadingAnalyzer, MetadataAnalyzer, TextAnalyzer };
+export { ContentAnalyzer };
+export type { AnalysisResult };

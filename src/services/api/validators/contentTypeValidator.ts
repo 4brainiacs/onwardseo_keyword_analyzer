@@ -1,26 +1,22 @@
 import { AnalysisError } from '../../errors';
-import { CONTENT_TYPES, ERROR_MESSAGES, HTTP_STATUS } from '../constants';
+import { logger } from '../../../utils/logger';
 
 export class ContentTypeValidator {
   static validate(response: Response): void {
     const contentType = response.headers.get('content-type');
     
     if (!contentType) {
-      return; // Some APIs don't set content-type header
-    }
-
-    const normalizedType = contentType.toLowerCase();
-    
-    if (normalizedType.includes(CONTENT_TYPES.HTML)) {
+      logger.error('Missing content type header');
       throw new AnalysisError(
-        ERROR_MESSAGES.HTML_RESPONSE,
-        HTTP_STATUS.SERVER_ERROR,
-        'Server returned HTML instead of JSON. This usually indicates a server-side error.',
+        'Missing content type',
+        415,
+        'Response is missing content type header',
         true
       );
     }
 
-    if (!normalizedType.includes(CONTENT_TYPES.JSON)) {
+    if (!contentType.toLowerCase().includes('application/json')) {
+      logger.error('Invalid content type:', { contentType });
       throw new AnalysisError(
         'Invalid content type',
         415,

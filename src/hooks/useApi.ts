@@ -1,64 +1,103 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '../services/api/client';
+import { LoadingState } from '../services/api/types/state';
+import { AnalysisError } from '../services/errors';
 import { logger } from '../utils/logger';
-import type { ApiState, LoadingState } from '../services/api/types';
+import type { ApiState } from '../services/api/types/state';
 
-interface UseApiOptions<T> {
+export interface UseApiOptions<T> {
   onSuccess?: (data: T) => void;
-  onError?: (error: Error) => void;
-  timeout?: number;
+  onError?: (error: AnalysisError) => void;
+  retryCount?: number;
 }
 
 export function useApi<T>(options: UseApiOptions<T> = {}) {
   const [state, setState] = useState<ApiState<T>>({
-    status: 'idle',
-    error: null,
+    status: LoadingState.IDLE,
     data: null,
+    error: null,
     retryCount: 0
   });
-
-  const setStatus = (status: LoadingState) => {
-    setState((prevState: ApiState<T>) => ({ ...prevState, status }));
-  };
 
   const request = useCallback(async (
     endpoint: string,
     requestOptions: RequestInit = {}
-  ): Promise<void> => {
-    setStatus('loading');
-    setState((prevState: ApiState<T>) => ({ ...prevState, error: null }));
+  ) => {
+    setState(prev => ({ 
+      ...prev, 
+      status: LoadingState.LOADING, 
+      error: null 
+    }));
 
     try {
-      const data = await apiClient.analyze(endpoint);
+      const response = await fetch(endpoint, {
+        ...requestOptions,
+        headers: {
+          'Content-Type': 'application/json',
+          ...requestOptions.headers
+        }
+      });
 
-      setState((prevState: ApiState<T>) => ({
-        ...prevState,
-        status: 'success',
+      if (!response.ok) {
+        throw new AnalysisError(
+          'Request failed',
+          response.status,
+          await response.text(),
+          response.status >= 500
+        );
+      }
+
+      const data = await response.json();
+      
+      setState({
+        status: LoadingState.SUCCESS,
         data,
-        error: null
-      }));
+        error: null,
+        retryCount: 0
+      });
 
-      options.onSuccess?.(data as T);
+      options.onSuccess?.(data);
     } catch (error) {
-      logger.error('API request failed:', { error });
+      logger.error('API request failed:', error);
 
-      setState((prevState: ApiState<T>) => ({
-        ...prevState,
-        status: 'error',
-        error: error as Error,
-        retryCount: prevState.retryCount + 1,
-        lastAttempt: new Date()
-      }));
+      const analysisError = error instanceof AnalysisError 
+        ? error 
+        : new AnalysisError(
+            'Request failed',
+            500,
+            error instanceof Error ? error.message : 'Unknown error',
+            true
+          );
 
-      options.onError?.(error as Error);
+      if (analysisError.retryable && state.retryCount < (options.retryCount || 3)) {
+        setState(prev => ({
+          ...prev,
+          status: LoadingState.RETRYING,
+          retryCount: prev.retryCount + 1
+        }));
+
+        setTimeout(() => {
+          request(endpoint, requestOptions);
+        }, analysisError.retryAfter);
+
+        return;
+      }
+
+      setState({
+        status: LoadingState.ERROR,
+        data: null,
+        error: analysisError,
+        retryCount: 0
+      });
+
+      options.onError?.(analysisError);
     }
-  }, [options]);
+  }, [options, state.retryCount]);
 
   const reset = useCallback(() => {
     setState({
-      status: 'idle',
-      error: null,
+      status: LoadingState.IDLE,
       data: null,
+      error: null,
       retryCount: 0
     });
   }, []);
@@ -67,8 +106,9 @@ export function useApi<T>(options: UseApiOptions<T> = {}) {
     ...state,
     request,
     reset,
-    isLoading: state.status === 'loading',
-    isError: state.status === 'error',
-    isSuccess: state.status === 'success'
+    isLoading: state.status === LoadingState.LOADING || 
+               state.status === LoadingState.RETRYING,
+    isError: state.status === LoadingState.ERROR,
+    isSuccess: state.status === LoadingState.SUCCESS
   };
 }
