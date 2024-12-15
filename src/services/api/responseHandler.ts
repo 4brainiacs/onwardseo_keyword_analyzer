@@ -1,58 +1,80 @@
-import { AnalysisError } from '../errors/AnalysisError';
+import { AnalysisError } from '../errors';
 import { logger } from '../../utils/logger';
-import { validateResponse } from '../validation/responseValidator';
+import { HTTP_STATUS, ERROR_MESSAGES } from './constants';
+import type { ApiResponse } from './types';
 
 export async function handleApiResponse<T>(response: Response): Promise<T> {
   try {
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        throw new AnalysisError(
-          'Request failed',
-          response.status,
-          `Server returned status ${response.status}`
-        );
-      }
-
+    // Validate content type
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
       throw new AnalysisError(
-        errorData.error || 'Request failed',
-        response.status,
-        errorData.details,
-        errorData.retryable,
-        errorData.retryAfter
+        ERROR_MESSAGES.INVALID_JSON,
+        HTTP_STATUS.SERVER_ERROR,
+        `Expected JSON but received: ${contentType}`,
+        true
       );
     }
 
-    // Validate the response format
-    const data = await validateResponse(response);
+    // Get response text
+    const text = await response.text();
+    
+    if (!text.trim()) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.INVALID_RESPONSE,
+        HTTP_STATUS.SERVER_ERROR,
+        'Server returned an empty response',
+        true
+      );
+    }
 
-    // Log successful response
-    logger.info('API request successful', {
-      status: response.status,
-      url: response.url
-    });
+    // Check for HTML content
+    if (text.trim().toLowerCase().startsWith('<!doctype') || 
+        text.trim().toLowerCase().startsWith('<html')) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.HTML_RESPONSE,
+        HTTP_STATUS.SERVER_ERROR,
+        'Server returned HTML instead of JSON',
+        true
+      );
+    }
 
-    return data as T;
+    // Parse JSON
+    let data: ApiResponse<T>;
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      logger.error('JSON parse error:', { error, responseText: text.slice(0, 200) });
+      throw new AnalysisError(
+        ERROR_MESSAGES.INVALID_JSON,
+        HTTP_STATUS.SERVER_ERROR,
+        'Server returned invalid JSON data',
+        true
+      );
+    }
+
+    // Check response status
+    if (!response.ok || !data.success) {
+      throw new AnalysisError(
+        data.error || ERROR_MESSAGES.SERVER_ERROR,
+        response.status,
+        data.details || `Server returned status ${response.status}`,
+        response.status >= 500,
+        data.retryAfter
+      );
+    }
+
+    return data.data;
   } catch (error) {
-    // Log the error with context
-    logger.error('API response handling failed:', {
-      error,
-      status: response.status,
-      url: response.url
-    });
-
-    // Re-throw analysis errors
     if (error instanceof AnalysisError) {
       throw error;
     }
 
-    // Handle other errors
+    logger.error('Response handling error:', error);
     throw new AnalysisError(
-      'Failed to process response',
-      500,
-      error instanceof Error ? error.message : 'Unknown error occurred',
+      ERROR_MESSAGES.SERVER_ERROR,
+      HTTP_STATUS.SERVER_ERROR,
+      error instanceof Error ? error.message : 'An unexpected error occurred',
       true
     );
   }

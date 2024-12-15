@@ -7,6 +7,7 @@ export class ScrapingService {
     if (!this.apiKey) {
       throw new Error('SCRAPINGBEE_API_KEY is required');
     }
+    this.baseUrl = 'https://app.scrapingbee.com/api/v1';
   }
 
   async scrapeWebpage(url) {
@@ -26,26 +27,47 @@ export class ScrapingService {
 
       const response = await axios({
         method: 'GET',
-        url: `https://app.scrapingbee.com/api/v1?${params.toString()}`,
+        url: `${this.baseUrl}?${params.toString()}`,
         timeout: 30000,
-        responseType: 'text',
+        maxContentLength: 50 * 1024 * 1024,
         headers: {
           'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'en-US,en;q=0.5'
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate'
         },
-        validateStatus: null
+        validateStatus: (status) => status === 200,
+        responseType: 'text'
       });
 
       if (!response.data) {
         throw new Error('Empty response from ScrapingBee');
       }
 
-      if (response.status !== 200) {
-        throw new Error(`ScrapingBee returned status ${response.status}`);
+      // Validate HTML content
+      const content = response.data.toString().trim();
+      if (!content.startsWith('<!DOCTYPE') && !content.startsWith('<html')) {
+        throw new Error('Invalid HTML response from ScrapingBee');
       }
 
-      return response.data;
+      return content;
     } catch (error) {
+      if (error.response) {
+        const status = error.response.status;
+        const message = error.response.data?.message || error.message;
+        
+        if (status === 401) {
+          throw new Error('Invalid ScrapingBee API key');
+        } else if (status === 429) {
+          throw new Error('Rate limit exceeded. Please try again later.');
+        }
+        
+        throw new Error(`ScrapingBee error (${status}): ${message}`);
+      }
+
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out');
+      }
+
       logger.error('Scraping failed:', error);
       throw new Error(`Failed to scrape webpage: ${error.message}`);
     }

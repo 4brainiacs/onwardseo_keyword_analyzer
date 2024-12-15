@@ -1,95 +1,69 @@
 import { AnalysisError } from '../../errors';
-import { ERROR_MESSAGES, HTTP_STATUS } from '../constants';
-import { ContentTypeValidator } from './contentTypeValidator';
-import type { ApiResponse } from '../types';
+import { logger } from '../../../utils/logger';
+import { API_CONSTANTS, ERROR_MESSAGES } from '../constants';
 
-export async function validateResponse<T>(response: Response): Promise<ApiResponse<T>> {
-  try {
-    // Step 1: Validate Content-Type header
-    ContentTypeValidator.validate(response);
+export class ResponseValidator {
+  validateContentType(response: Response): void {
+    const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
+    
+    if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
+      logger.error('Invalid content type:', { contentType });
+      throw new AnalysisError(
+        ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
+        415,
+        `Expected JSON but received: ${contentType}`,
+        false
+      );
+    }
+  }
 
-    // Step 2: Get response text
+  async validateResponseBody<T>(response: Response): Promise<T> {
     const text = await response.text();
-
-    // Step 3: Check for empty response
-    if (!text || !text.trim()) {
+    
+    if (!text.trim()) {
       throw new AnalysisError(
-        'Empty response',
-        HTTP_STATUS.SERVER_ERROR,
-        'Server returned an empty response',
+        ERROR_MESSAGES.VALIDATION.EMPTY_RESPONSE,
+        500,
+        'Server returned empty response',
         true
       );
     }
 
-    // Step 4: Check for HTML content
-    if (text.trim().toLowerCase().startsWith('<!doctype') || 
-        text.trim().toLowerCase().startsWith('<html')) {
-      throw new AnalysisError(
-        ERROR_MESSAGES.HTML_RESPONSE,
-        HTTP_STATUS.SERVER_ERROR,
-        'Server returned HTML instead of JSON. This usually indicates a server-side error.',
-        true
-      );
-    }
-
-    // Step 5: Parse JSON
-    let data: unknown;
     try {
-      data = JSON.parse(text);
+      const data = JSON.parse(text);
+      return this.validateApiResponse(data);
     } catch (error) {
-      logger.error('JSON parse error:', { error, responsePreview: text.slice(0, 200) });
+      logger.error('JSON parse error:', { error, responseText: text.slice(0, 200) });
       throw new AnalysisError(
-        ERROR_MESSAGES.INVALID_JSON,
-        HTTP_STATUS.SERVER_ERROR,
-        'Failed to parse response as JSON',
+        ERROR_MESSAGES.VALIDATION.INVALID_JSON,
+        500,
+        'Server returned invalid JSON data',
         true
       );
     }
+  }
 
-    // Step 6: Validate response structure
+  private validateApiResponse<T>(data: unknown): T {
     if (!data || typeof data !== 'object') {
       throw new AnalysisError(
-        ERROR_MESSAGES.INVALID_RESPONSE,
-        HTTP_STATUS.SERVER_ERROR,
+        'Invalid response format',
+        500,
         'Server returned unexpected data format',
         true
       );
     }
 
-    const apiResponse = data as ApiResponse<T>;
-
-    // Step 7: Handle error responses
-    if (!response.ok) {
+    const response = data as any;
+    if (!response.success || !response.data) {
       throw new AnalysisError(
-        apiResponse.error || ERROR_MESSAGES.SERVER_ERROR,
-        response.status,
-        apiResponse.details || `Server returned status ${response.status}`,
-        response.status >= HTTP_STATUS.SERVER_ERROR,
-        apiResponse.retryAfter
+        response.error || 'Request failed',
+        response.status || 500,
+        response.details || 'Server returned unsuccessful response',
+        response.retryable ?? false,
+        response.retryAfter ?? API_CONSTANTS.TIMEOUTS.RETRY
       );
     }
 
-    // Step 8: Validate success response
-    if (!apiResponse.success || !apiResponse.data) {
-      throw new AnalysisError(
-        ERROR_MESSAGES.INVALID_RESPONSE,
-        HTTP_STATUS.SERVER_ERROR,
-        'Response is missing required fields',
-        true
-      );
-    }
-
-    return apiResponse;
-  } catch (error) {
-    if (error instanceof AnalysisError) {
-      throw error;
-    }
-
-    throw new AnalysisError(
-      'Response validation failed',
-      HTTP_STATUS.SERVER_ERROR,
-      error instanceof Error ? error.message : 'Failed to validate response',
-      true
-    );
+    return response.data;
   }
 }

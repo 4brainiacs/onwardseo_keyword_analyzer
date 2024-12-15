@@ -1,44 +1,50 @@
-import { API_DEFAULTS } from '../constants';
-import { AnalysisError } from '../../errors';
+```typescript
+import { logger } from '../../../utils/logger';
+import type { RetryConfig } from '../types/requests';
 
-export function calculateRetryDelay(attempt: number, baseDelay = API_DEFAULTS.RETRY_DELAY): number {
-  const delay = Math.min(
-    baseDelay * Math.pow(2, attempt),
-    API_DEFAULTS.MAX_RETRY_DELAY
-  );
-  
-  // Add jitter to prevent thundering herd
-  return delay + Math.random() * 1000;
-}
+export class RetryHandler {
+  constructor(private config: RetryConfig) {}
 
-export function shouldRetry(error: unknown, attempt: number): boolean {
-  if (attempt >= API_DEFAULTS.MAX_RETRIES) {
-    return false;
-  }
+  async execute<T>(
+    operation: () => Promise<T>,
+    context: string
+  ): Promise<T> {
+    let attempt = 0;
+    let lastError: Error | null = null;
 
-  if (error instanceof AnalysisError) {
-    return error.retryable;
-  }
+    while (attempt < this.config.maxAttempts) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        attempt++;
 
-  if (error instanceof Error) {
-    // Retry network errors
-    if (error.message.includes('Failed to fetch') || 
-        error.message.includes('NetworkError')) {
-      return true;
+        if (!this.config.shouldRetry(error, attempt)) {
+          throw error;
+        }
+
+        const delay = this.calculateDelay(attempt);
+        logger.warn(`Retrying ${context} (${attempt}/${this.config.maxAttempts}) after ${delay}ms`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          attempt,
+          delay
+        });
+
+        await this.sleep(delay);
+      }
     }
 
-    // Retry timeouts
-    if (error.message.includes('timeout') || 
-        error.message.includes('aborted')) {
-      return true;
-    }
+    throw lastError;
   }
 
-  // Retry 5xx errors and rate limits
-  if (error && typeof error === 'object' && 'status' in error) {
-    const status = (error as { status: number }).status;
-    return status >= 500 || status === 429;
+  private calculateDelay(attempt: number): number {
+    const exponentialDelay = this.config.initialDelay * Math.pow(2, attempt - 1);
+    const jitter = Math.random() * 1000;
+    return Math.min(exponentialDelay + jitter, this.config.maxDelay);
   }
 
-  return false;
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
+```

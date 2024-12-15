@@ -1,20 +1,14 @@
-export const apiConfig = {
+export const DEFAULT_CONFIG = {
   baseUrl: '/.netlify/functions',
   timeout: 30000,
-  retries: {
-    maxAttempts: 3,
-    initialDelay: 1000,
-    maxDelay: 10000
-  },
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
+  retries: 3,
+  retryDelay: 1000,
+  maxRetryDelay: 10000
 };
 
-export const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Request-ID',
-  'Content-Type': 'application/json'
-};
+export const ERROR_MESSAGES = {
+  NETWORK_ERROR: 'Network error occurred',
+  TIMEOUT: 'Request timed out',
+  INVALID_RESPONSE: 'Invalid response format',
+  SERVER_ERROR: 'Server error occurred'
+} as const;

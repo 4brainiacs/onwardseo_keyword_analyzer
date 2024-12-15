@@ -7,7 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Header } from './components/Layout/Header';
 import { Footer } from './components/Layout/Footer';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { useAnalysis } from './hooks/useAnalysis';
+import { useAnalysis } from './hooks';
 import { logger } from './utils/logger';
 import { AnalysisError } from './services/errors';
 
@@ -27,7 +27,7 @@ export default function App() {
     },
     onError: (error) => {
       logger.error('Analysis failed:', {
-        error: error instanceof AnalysisError ? error.toJSON() : error,
+        error: error instanceof AnalysisError ? error : error,
         context: 'App component error handler'
       });
     }

@@ -23,11 +23,3 @@ export class ScrapingError extends Error {
     this.name = 'ScrapingError';
   }
 }
-
-export interface ScrapingBeeResponse {
-  url?: string;
-  statusCode?: number;
-  body?: string;
-  error?: string;
-  message?: string;
-}

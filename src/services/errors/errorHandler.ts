@@ -1,13 +1,10 @@
-import { BaseError, AnalysisError, NetworkError, ServerError } from './types';
+import { BaseError, AnalysisError, NetworkError } from './index';
 import { logger } from '../../utils/logger';
-import { ErrorReporter } from './errorReporter';
 
 export class ErrorHandler {
   static handle(error: unknown, context?: Record<string, unknown>): BaseError {
-    // Log the error
-    ErrorReporter.captureException(error, { additionalInfo: context });
+    logger.error('Error occurred:', { error, context });
 
-    // Return appropriate error type
     if (error instanceof BaseError) {
       return error;
     }
@@ -16,6 +13,7 @@ export class ErrorHandler {
       if (error.message.includes('Failed to fetch')) {
         return new NetworkError(
           'Network error',
+          503,
           'Unable to connect to the server. Please check your connection.'
         );
       }
@@ -23,15 +21,18 @@ export class ErrorHandler {
       if (error.message.includes('aborted')) {
         return new NetworkError(
           'Request timeout',
+          408,
           'The request took too long to complete. Please try again.'
         );
       }
     }
 
     if (error instanceof Response) {
-      return new ServerError(
+      return new AnalysisError(
         'Request failed',
-        `Server returned status ${error.status}`
+        error.status,
+        `Server returned status ${error.status}`,
+        error.status >= 500
       );
     }
 
@@ -50,18 +51,12 @@ export class ErrorHandler {
     if (error instanceof BaseError) {
       return error.retryable;
     }
-
-    if (error instanceof TypeError) {
-      return error.message.includes('Failed to fetch') ||
-             error.message.includes('aborted');
-    }
-
     return false;
   }
 
   static getRetryDelay(error: unknown): number {
     if (error instanceof BaseError) {
-      return error.retryAfter || 5000;
+      return error.retryAfter;
     }
     return 5000;
   }

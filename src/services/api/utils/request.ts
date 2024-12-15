@@ -24,14 +24,7 @@ export function createRequestConfig(config: RequestConfig = {}): RequestInit {
 }
 
 export function buildUrl(baseUrl: string, path: string): string {
-  // Handle both absolute and relative paths
-  if (path.startsWith('http')) {
-    return path;
-  }
-  
-  // Ensure proper URL joining
   const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  
   return `${base}${cleanPath}`;
 }

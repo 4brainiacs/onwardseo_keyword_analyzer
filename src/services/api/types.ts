@@ -1,3 +1,9 @@
+export interface RetryConfig {
+  maxAttempts: number;
+  baseDelay: number;
+  maxDelay: number;
+}
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -10,20 +16,15 @@ export interface ApiResponse<T = unknown> {
 }
 
 export interface ApiError {
-  success: false;
-  error: string;
+  code: string;
+  message: string;
   details?: string;
-  code?: string;
-  retryable?: boolean;
+  status: number;
+  retryable: boolean;
   retryAfter?: number;
-  timestamp?: string;
-  requestId?: string;
 }
-
-export type LoadingState = 'idle' | 'loading' | 'retrying' | 'success' | 'error';
 
 export interface RequestConfig extends RequestInit {
   timeout?: number;
   retries?: number;
-  validateStatus?: (status: number) => boolean;
 }

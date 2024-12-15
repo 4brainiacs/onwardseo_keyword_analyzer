@@ -2,6 +2,20 @@ import fetch from 'node-fetch';
 import { validateUrl } from './utils/validators.js';
 import { logger } from './services/utils/logger.js';
 
+const normalizeHtml = (html) => {
+  if (!html || typeof html !== 'string' || html.trim() === '') {
+    throw new Error('Empty or invalid HTML returned');
+  }
+
+  // Basic HTML validation
+  const cleanHtml = html.trim();
+  if (!cleanHtml.includes('<!DOCTYPE') && !cleanHtml.includes('<html')) {
+    throw new Error('Invalid HTML structure received');
+  }
+
+  return cleanHtml;
+};
+
 export const handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -70,6 +84,7 @@ export const handler = async (event) => {
     }
 
     const html = await response.text();
+    const normalizedHtml = normalizeHtml(html);
     logger.info('Successfully scraped webpage');
 
     return {
@@ -77,9 +92,10 @@ export const handler = async (event) => {
       headers,
       body: JSON.stringify({
         success: true,
-        data: { html }
+        data: { html: normalizedHtml }
       })
     };
+
   } catch (error) {
     logger.error('Scraping error:', error);
     return {
@@ -88,7 +104,9 @@ export const handler = async (event) => {
       body: JSON.stringify({
         success: false,
         error: 'Failed to scrape webpage',
-        details: error.message
+        details: error.message,
+        retryable: true,
+        retryAfter: 5000
       })
     };
   }

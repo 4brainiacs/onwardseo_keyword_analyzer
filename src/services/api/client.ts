@@ -1,55 +1,46 @@
-import { env } from '../../config/environment';
-import { logger } from '../../utils/logger';
 import { AnalysisError } from '../errors';
-import { validateResponse } from './validators/responseValidator';
-import { buildRequest } from './utils/requestBuilder';
-import { calculateRetryDelay, shouldRetry } from './utils/retry';
-import { API_DEFAULTS } from './constants';
-import type { ApiResponse, RequestConfig } from './types';
+import { logger } from '../../utils/logger';
+import { RequestHandler } from './handlers/RequestHandler';
+import { ResponseHandler } from './handlers/ResponseHandler';
+import { RetryHandler } from './handlers/RetryHandler';
+import type { AnalysisResult } from '../../types';
 
 export class ApiClient {
-  constructor(private baseUrl: string = '/.netlify/functions') {}
+  private baseUrl: string = '/.netlify/functions';
+  private requestHandler: RequestHandler;
+  private responseHandler: ResponseHandler;
+  private retryHandler: RetryHandler;
 
-  async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
-    let attempt = 0;
-    const maxAttempts = config.retries ?? API_DEFAULTS.MAX_RETRIES;
+  constructor() {
+    this.requestHandler = new RequestHandler();
+    this.responseHandler = new ResponseHandler();
+    this.retryHandler = new RetryHandler({
+      maxAttempts: 3,
+      baseDelay: 2000,
+      maxDelay: 10000
+    });
+  }
 
-    while (attempt < maxAttempts) {
+  async analyze(url: string): Promise<AnalysisResult> {
+    return this.retryHandler.execute(async () => {
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(
-          () => controller.abort(), 
-          config.timeout ?? API_DEFAULTS.TIMEOUT
+        logger.info('Starting analysis', { url });
+
+        const response = await this.requestHandler.sendRequest(
+          `${this.baseUrl}/analyze`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url })
+          }
         );
 
-        const url = `${this.baseUrl}${endpoint}`;
-        logger.info('Making API request', { url, method: config.method });
-
-        const response = await fetch(url, buildRequest({
-          ...config,
-          signal: controller.signal,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            ...config.headers
-          }
-        }));
-
-        clearTimeout(timeout);
-
-        const result = await validateResponse<ApiResponse<T>>(response);
-        logger.info('API request successful', { url });
-        return result.data;
+        return await this.responseHandler.handleResponse<AnalysisResult>(response);
       } catch (error) {
-        attempt++;
+        logger.error('API request failed:', { error, url });
         
-        if (shouldRetry(error, attempt) && attempt < maxAttempts) {
-          const delay = calculateRetryDelay(attempt);
-          logger.warn(`Retrying request (${attempt}/${maxAttempts}) after ${delay}ms`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-
         if (error instanceof AnalysisError) {
           throw error;
         }
@@ -61,14 +52,7 @@ export class ApiClient {
           true
         );
       }
-    }
-
-    throw new AnalysisError(
-      'Max retry attempts reached',
-      500,
-      `Failed after ${maxAttempts} attempts`,
-      false
-    );
+    }, 'analysis');
   }
 }
 

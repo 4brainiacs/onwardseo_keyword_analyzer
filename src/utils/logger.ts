@@ -7,10 +7,18 @@ interface LogEntry {
   data?: any;
 }
 
-class Logger {
+export class Logger {
+  private static instance: Logger;
   private logs: LogEntry[] = [];
   private readonly maxLogs = 1000;
   private readonly isDev = process.env.NODE_ENV === 'development';
+
+  static getInstance(): Logger {
+    if (!Logger.instance) {
+      Logger.instance = new Logger();
+    }
+    return Logger.instance;
+  }
 
   debug(message: string, data?: any) {
     if (this.isDev) {
@@ -34,8 +42,7 @@ class Logger {
           error: {
             name: message.name,
             message: message.message,
-            stack: message.stack,
-            ...(message as any).toJSON?.()
+            stack: message.stack
           }
         }
       : data;
@@ -47,22 +54,21 @@ class Logger {
     const timestamp = new Date().toISOString();
     const sanitizedData = this.sanitizeData(data);
     
-    const logEntry: LogEntry = {
+    const entry: LogEntry = {
       timestamp,
       level,
       message,
       data: sanitizedData
     };
-    
-    this.logs.push(logEntry);
+
+    this.logs.push(entry);
     if (this.logs.length > this.maxLogs) {
       this.logs.shift();
     }
-    
-    const consoleData = sanitizedData ? 
-      '\n' + JSON.stringify(sanitizedData, null, 2) : '';
-      
-    const consoleMessage = `[${timestamp}] ${level}: ${message}${consoleData}`;
+
+    const consoleMessage = `[${timestamp}] ${level}: ${message}${
+      sanitizedData ? '\n' + JSON.stringify(sanitizedData, null, 2) : ''
+    }`;
 
     switch (level) {
       case 'ERROR':
@@ -74,8 +80,9 @@ class Logger {
       case 'INFO':
         console.info(consoleMessage);
         break;
-      default:
-        console.log(consoleMessage);
+      case 'DEBUG':
+        console.debug(consoleMessage);
+        break;
     }
   }
 
@@ -114,4 +121,4 @@ class Logger {
   }
 }
 
-export const logger = new Logger();
+export const logger = Logger.getInstance();
