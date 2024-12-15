@@ -1,30 +1,14 @@
-export interface ErrorMetadata {
-  message: string;
-  status?: number;
-  details?: string;
-  retryable?: boolean;
-  retryAfter?: number;
-  requestId?: string;
-  context?: Record<string, unknown>;
-}
-
 export class AnalysisError extends Error {
-  readonly status: number;
-  readonly details?: string;
-  readonly retryable: boolean;
-  readonly retryAfter: number;
-  readonly requestId?: string;
-  readonly context?: Record<string, unknown>;
-
-  constructor(metadata: ErrorMetadata) {
-    super(metadata.message);
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly details: string,
+    public readonly retryable: boolean,
+    public readonly retryAfter: number = 5000,
+    public readonly requestId?: string
+  ) {
+    super(message);
     this.name = 'AnalysisError';
-    this.status = metadata.status ?? 500;
-    this.details = metadata.details;
-    this.retryable = metadata.retryable ?? false;
-    this.retryAfter = metadata.retryAfter ?? 5000;
-    this.requestId = metadata.requestId;
-    this.context = metadata.context;
     Error.captureStackTrace(this, this.constructor);
   }
 
@@ -36,17 +20,7 @@ export class AnalysisError extends Error {
       details: this.details,
       retryable: this.retryable,
       retryAfter: this.retryAfter,
-      requestId: this.requestId,
-      context: this.context,
-      stack: this.stack
+      requestId: this.requestId
     };
-  }
-
-  static fromError(error: unknown): AnalysisError {
-    return new AnalysisError({
-      message: error instanceof Error ? error.message : 'An unexpected error occurred',
-      status: 500,
-      retryable: true
-    });
   }
 }

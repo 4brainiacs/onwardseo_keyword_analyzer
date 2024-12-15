@@ -1,62 +1,92 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS } from '../constants';
-import type { ApiResponse } from '../types';
 
 export class ResponseHandler {
-  async handleResponse<T>(response: Response): Promise<T> {
+  async validateResponse(response: Response): Promise<void> {
+    const contentType = response.headers.get('content-type');
+    
+    if (!contentType?.includes('application/json')) {
+      throw new AnalysisError(
+        'Invalid content type',
+        415,
+        `Expected JSON but received: ${contentType}`,
+        false
+      );
+    }
+
+    if (!response.ok) {
+      const error = await this.parseErrorResponse(response);
+      throw new AnalysisError(
+        error.message || 'Request failed',
+        response.status,
+        error.details || `Server returned status ${response.status}`,
+        response.status >= 500
+      );
+    }
+  }
+
+  async parseResponse<T>(response: Response): Promise<T> {
     try {
-      const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
-      if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
-        throw new AnalysisError({
-          message: API_CONSTANTS.ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
-          status: 415,
-          details: `Expected JSON but received: ${contentType}`,
-          retryable: false
-        });
-      }
-
       const text = await response.text();
+      
       if (!text.trim()) {
-        throw new AnalysisError({
-          message: API_CONSTANTS.ERROR_MESSAGES.VALIDATION.EMPTY_RESPONSE,
-          status: 500,
-          details: 'Server returned empty response',
-          retryable: true
-        });
+        throw new AnalysisError(
+          'Empty response',
+          500,
+          'Server returned empty response',
+          true
+        );
       }
 
-      let data: ApiResponse<T>;
-      try {
-        data = JSON.parse(text);
-      } catch (error) {
-        throw new AnalysisError({
-          message: API_CONSTANTS.ERROR_MESSAGES.VALIDATION.INVALID_JSON,
-          status: 500,
-          details: 'Server returned invalid JSON data',
-          retryable: true
-        });
+      const data = JSON.parse(text);
+      
+      if (!data || typeof data !== 'object') {
+        throw new AnalysisError(
+          'Invalid response format',
+          500,
+          'Server returned unexpected data format',
+          true
+        );
       }
 
-      if (!data.success) {
-        throw new AnalysisError({
-          message: data.error,
-          status: data.status || 500,
-          details: data.details,
-          retryable: data.retryable ?? false,
-          retryAfter: data.retryAfter
-        });
+      if (!data.success || !data.data) {
+        throw new AnalysisError(
+          data.error || 'Request failed',
+          500,
+          data.details || 'Server returned unsuccessful response',
+          true
+        );
       }
 
       return data.data;
     } catch (error) {
-      logger.error('Response handling failed:', error);
-      throw error instanceof AnalysisError ? error : new AnalysisError({
-        message: 'Failed to process response',
-        status: 500,
-        details: error instanceof Error ? error.message : 'An unexpected error occurred',
-        retryable: true
-      });
+      if (error instanceof AnalysisError) {
+        throw error;
+      }
+
+      logger.error('Response parsing failed:', error);
+      throw new AnalysisError(
+        'Invalid response',
+        500,
+        error instanceof Error ? error.message : 'Failed to parse server response',
+        true
+      );
+    }
+  }
+
+  private async parseErrorResponse(response: Response): Promise<{ message?: string; details?: string }> {
+    try {
+      const data = await response.json();
+      return {
+        message: data.error,
+        details: data.details
+      };
+    } catch (error) {
+      logger.error('Failed to parse error response:', error);
+      return {
+        message: `HTTP ${response.status}`,
+        details: response.statusText
+      };
     }
   }
 }

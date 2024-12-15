@@ -1,15 +1,18 @@
-import { ApiClient, apiClient } from './ApiClient';
-import { RequestHandler } from './RequestHandler';
-import { ResponseHandler } from './ResponseHandler';
-import { RetryHandler } from './RetryHandler';
+import { ApiClient } from './ApiClient';
+import { RequestHandler } from '../handlers/RequestHandler';
+import { ResponseHandler } from '../handlers/ResponseHandler';
+import { API_CONFIG } from '../../../config/api';
 
-export {
-  apiClient,
-  ApiClient,
-  RequestHandler,
-  ResponseHandler,
-  RetryHandler
-};
+// Create instances of required dependencies
+const requestHandler = new RequestHandler();
+const responseHandler = new ResponseHandler();
 
-// Default export for convenience
-export default apiClient;
+// Create and export the singleton instance
+export const apiClient = new ApiClient(
+  API_CONFIG,
+  requestHandler,
+  responseHandler
+);
+
+// Also export the class for testing/mocking
+export { ApiClient };

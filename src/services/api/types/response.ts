@@ -1,10 +1,4 @@
-export interface ApiConfig {
-  baseUrl: string;
-  timeout: number;
-  retries: number;
-}
-
-export interface ApiResponse<T> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: {

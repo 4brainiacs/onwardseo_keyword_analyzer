@@ -1,14 +1,14 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import type { ApiResponse } from '../types';
 
 export class ResponseHandler {
   async handleResponse<T>(response: Response): Promise<T> {
     try {
       const contentType = response.headers.get('content-type');
-      if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
+      if (!contentType?.includes('application/json')) {
         throw new AnalysisError(
-          ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
+          'Invalid content type',
           415,
           `Expected JSON but received: ${contentType}`,
           false
@@ -18,36 +18,35 @@ export class ResponseHandler {
       const text = await response.text();
       if (!text.trim()) {
         throw new AnalysisError(
-          ERROR_MESSAGES.VALIDATION.EMPTY_RESPONSE,
+          'Empty response',
           500,
           'Server returned empty response',
           true
         );
       }
 
-      let data;
+      let data: ApiResponse<T>;
       try {
         data = JSON.parse(text);
       } catch (error) {
         throw new AnalysisError(
-          ERROR_MESSAGES.VALIDATION.INVALID_JSON,
+          'Invalid JSON response',
           500,
           'Server returned invalid JSON data',
           true
         );
       }
 
-      if (!data.success || !data.data) {
+      if (!data.success) {
         throw new AnalysisError(
-          data.error || ERROR_MESSAGES.VALIDATION.MALFORMED_RESPONSE,
-          data.status || 500,
-          data.details || 'Server returned unsuccessful response',
-          data.retryable ?? false,
-          data.retryAfter
+          data.error?.message || 'Request failed',
+          500,
+          data.error?.details || 'Server returned unsuccessful response',
+          true
         );
       }
 
-      return data.data;
+      return data.data as T;
     } catch (error) {
       logger.error('Response handling failed:', error);
       throw error instanceof AnalysisError ? error : new AnalysisError(

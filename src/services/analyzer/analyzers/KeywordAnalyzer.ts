@@ -27,9 +27,7 @@ export class KeywordAnalyzer {
 
     for (let i = 0; i <= words.length - length; i++) {
       const phrase = words.slice(i, i + length).join(' ');
-      if (this.isValidPhrase(phrase)) {
-        phrases.set(phrase, (phrases.get(phrase) || 0) + 1);
-      }
+      phrases.set(phrase, (phrases.get(phrase) || 0) + 1);
     }
 
     return Array.from(phrases.entries())
@@ -41,14 +39,6 @@ export class KeywordAnalyzer {
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-  }
-
-  private isValidPhrase(phrase: string): boolean {
-    return (
-      phrase.length >= 3 &&
-      !/^\d+$/.test(phrase) &&
-      !/^[^a-z]+$/.test(phrase)
-    );
   }
 
   private calculateDensity(count: number, totalWords: number, phraseLength: number): number {

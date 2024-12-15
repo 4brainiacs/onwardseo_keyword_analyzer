@@ -1,23 +1,25 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS, ERROR_MESSAGES } from '../constants';
+import type { ApiConfig } from '../types';
 
 export class RequestHandler {
-  async sendRequest(url: string, config: RequestInit): Promise<Response> {
+  constructor(private config: ApiConfig) {}
+
+  async sendRequest(url: string, options: RequestInit): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), API_CONSTANTS.TIMEOUTS.DEFAULT);
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
     try {
-      logger.debug('Making request:', { url, method: config.method });
+      logger.debug('Making request', { url, method: options.method });
 
       const response = await fetch(url, {
-        ...config,
+        ...options,
         signal: controller.signal
       });
 
       if (!response.ok) {
         throw new AnalysisError(
-          ERROR_MESSAGES.SERVER.INTERNAL_ERROR,
+          'Request failed',
           response.status,
           `Server returned status ${response.status}`,
           response.status >= 500
@@ -32,7 +34,7 @@ export class RequestHandler {
 
       if (error.name === 'AbortError') {
         throw new AnalysisError(
-          ERROR_MESSAGES.NETWORK.TIMEOUT,
+          'Request timeout',
           408,
           'The request took too long to complete',
           true
@@ -40,7 +42,7 @@ export class RequestHandler {
       }
 
       throw new AnalysisError(
-        ERROR_MESSAGES.NETWORK.CONNECTION,
+        'Network error',
         503,
         error instanceof Error ? error.message : 'Failed to connect to server',
         true

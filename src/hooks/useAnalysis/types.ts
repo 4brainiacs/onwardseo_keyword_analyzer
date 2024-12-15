@@ -1,21 +1,13 @@
 import type { AnalysisResult } from '../../types';
+import type { AnalysisError } from '../../services/errors';
 
 export interface UseAnalysisOptions {
-  onSuccess?: (data: AnalysisResult) => void;
-  onError?: (error: Error) => void;
-  retryCount?: number;
+  onSuccess?: (result: AnalysisResult) => void;
+  onError?: (error: AnalysisError) => void;
 }
 
 export interface UseAnalysisState {
   isLoading: boolean;
-  error: Error | null;
-  result: AnalysisResult | null;
-}
-
-export interface UseAnalysisResult {
-  analyze: (url: string) => Promise<void>;
-  reset: () => void;
-  isLoading: boolean;
-  error: Error | null;
+  error: AnalysisError | null;
   result: AnalysisResult | null;
 }

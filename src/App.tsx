@@ -25,9 +25,14 @@ export default function App() {
       setIsInputEnabled(false);
       logger.info('Analysis completed successfully');
     },
-    onError: (error) => {
+    onError: (error: AnalysisError) => {
       logger.error('Analysis failed:', {
-        error: error instanceof AnalysisError ? error : error,
+        error: {
+          message: error.message,
+          status: error.status,
+          details: error.details,
+          retryable: error.retryable
+        },
         context: 'App component error handler'
       });
     }
@@ -55,7 +60,7 @@ export default function App() {
             {error && (
               <ErrorDisplay 
                 error={error}
-                onRetry={error instanceof AnalysisError && error.retryable ? 
+                onRetry={error.retryable ? 
                   () => analyze(error.requestId || '') : undefined}
               />
             )}

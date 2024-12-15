@@ -3,50 +3,44 @@ import { apiClient } from '../../services/api';
 import { AnalysisError } from '../../services/errors';
 import { logger } from '../../utils/logger';
 import type { AnalysisResult } from '../../types';
-import type { UseAnalysisOptions } from './types';
+import type { UseAnalysisOptions, UseAnalysisState } from './types';
 
 export function useAnalysis(options: UseAnalysisOptions = {}) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [state, setState] = useState<UseAnalysisState>({
+    isLoading: false,
+    error: null,
+    result: null
+  });
 
   const analyze = useCallback(async (url: string) => {
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
     try {
-      setIsLoading(true);
-      setError(null);
-
-      logger.info('Starting analysis', { url });
-      const data = await apiClient.analyze(url);
-      
-      setResult(data);
-      setIsLoading(false);
-      options.onSuccess?.(data);
+      const result = await apiClient.analyze(url);
+      setState({ isLoading: false, error: null, result });
+      options.onSuccess?.(result);
     } catch (error) {
-      const analysisError = error instanceof AnalysisError ? error : new AnalysisError({
-        message: 'Analysis failed',
-        status: 500,
-        details: error instanceof Error ? error.message : 'An unexpected error occurred',
-        retryable: true
-      });
-
-      logger.error('Analysis failed', { error: analysisError });
-      setError(analysisError);
-      setIsLoading(false);
+      const analysisError = error instanceof AnalysisError ? 
+        error : 
+        new AnalysisError(
+          'Analysis failed',
+          500,
+          error instanceof Error ? error.message : 'Unknown error',
+          true
+        );
+      
+      setState({ isLoading: false, error: analysisError, result: null });
       options.onError?.(analysisError);
+      logger.error('Analysis failed', error);
     }
   }, [options]);
 
   const reset = useCallback(() => {
-    setIsLoading(false);
-    setError(null);
-    setResult(null);
+    setState({ isLoading: false, error: null, result: null });
   }, []);
 
   return {
+    ...state,
     analyze,
-    reset,
-    isLoading,
-    error,
-    result
+    reset
   };
 }

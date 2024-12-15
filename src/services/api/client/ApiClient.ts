@@ -1,61 +1,58 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { RequestHandler } from '../handlers/RequestHandler';
-import { ResponseHandler } from '../handlers/ResponseHandler';
-import { RetryHandler } from '../handlers/RetryHandler';
+import type { ApiConfig } from '../types';
 import type { AnalysisResult } from '../../../types';
 
 export class ApiClient {
-  private baseUrl: string;
-  private requestHandler: RequestHandler;
-  private responseHandler: ResponseHandler;
-  private retryHandler: RetryHandler;
-
-  constructor() {
-    this.baseUrl = window.__RUNTIME_CONFIG__?.VITE_API_URL || '/.netlify/functions';
-    this.requestHandler = new RequestHandler();
-    this.responseHandler = new ResponseHandler();
-    this.retryHandler = new RetryHandler({
-      maxAttempts: 3,
-      baseDelay: 2000,
-      maxDelay: 10000
-    });
-  }
+  constructor(private config: ApiConfig) {}
 
   async analyze(url: string): Promise<AnalysisResult> {
-    return this.retryHandler.execute(async () => {
-      try {
-        logger.info('Starting analysis', { url });
+    try {
+      logger.info('Starting analysis', { url });
 
-        const response = await this.requestHandler.sendRequest(
-          `${this.baseUrl}/analyze`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ url })
-          }
+      const response = await fetch(`${this.config.baseUrl}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url })
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new AnalysisError(
+          'Invalid content type',
+          415,
+          `Expected JSON but received: ${contentType}`,
+          false
         );
-
-        return await this.responseHandler.handleResponse<AnalysisResult>(response);
-      } catch (error) {
-        logger.error('API request failed', { error });
-        
-        if (error instanceof AnalysisError) {
-          throw error;
-        }
-
-        throw new AnalysisError({
-          message: 'Request failed',
-          status: 500,
-          details: error instanceof Error ? error.message : 'An unexpected error occurred',
-          retryable: true
-        });
       }
-    }, 'analysis');
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new AnalysisError(
+          data.error || 'Request failed',
+          response.status,
+          data.details || 'Server returned unsuccessful response',
+          data.retryable || false
+        );
+      }
+
+      return data.data;
+    } catch (error) {
+      logger.error('Analysis request failed:', error);
+
+      if (error instanceof AnalysisError) {
+        throw error;
+      }
+
+      throw new AnalysisError(
+        'Request failed',
+        500,
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        true
+      );
+    }
   }
 }
-
-// Create singleton instance
-export const apiClient = new ApiClient();

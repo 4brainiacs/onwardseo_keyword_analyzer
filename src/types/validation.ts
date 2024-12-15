@@ -1,7 +1,6 @@
 export interface ValidationResult {
   isValid: boolean;
   error?: string;
-  details?: string;
 }
 
 export interface ValidationContext {
