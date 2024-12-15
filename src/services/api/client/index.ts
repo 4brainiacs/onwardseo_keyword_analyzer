@@ -1,8 +1,15 @@
-export { ApiClient } from './ApiClient';
-export { RequestHandler } from './RequestHandler';
-export { ResponseHandler } from './ResponseHandler';
-export { RetryHandler } from './RetryHandler';
+import { ApiClient, apiClient } from './ApiClient';
+import { RequestHandler } from './RequestHandler';
+import { ResponseHandler } from './ResponseHandler';
+import { RetryHandler } from './RetryHandler';
 
-// Create singleton instance
-import { ApiClient } from './ApiClient';
-export const apiClient = new ApiClient();
+export {
+  apiClient,
+  ApiClient,
+  RequestHandler,
+  ResponseHandler,
+  RetryHandler
+};
+
+// Default export for convenience
+export default apiClient;

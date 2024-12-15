@@ -1,34 +1,43 @@
-import { BaseValidator } from '../core/BaseValidator';
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
+import type { ValidationResult } from './types';
 
-export class ContentValidator extends BaseValidator {
-  validateContent(content: string | null): void {
-    if (!content || !content.trim()) {
-      throw new AnalysisError(
-        'Empty content',
-        400,
-        'No content received',
-        false
-      );
+export class ContentValidator {
+  validateContent(content: string | null): ValidationResult {
+    try {
+      if (!content || !content.trim()) {
+        return {
+          isValid: false,
+          error: 'Empty content',
+          details: 'No content received'
+        };
+      }
+
+      const cleanContent = content.toLowerCase().trim();
+
+      // Check for error pages
+      if (this.isErrorPage(cleanContent)) {
+        return {
+          isValid: false,
+          error: 'Error page detected',
+          details: 'Target URL returned an error page'
+        };
+      }
+
+      logger.debug('Content validation passed', {
+        length: content.length,
+        preview: content.slice(0, 200)
+      });
+
+      return { isValid: true };
+    } catch (error) {
+      logger.error('Content validation failed:', { error });
+      return {
+        isValid: false,
+        error: 'Validation error',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
-
-    const cleanContent = content.toLowerCase().trim();
-
-    // Check for HTML error pages
-    if (this.isErrorPage(cleanContent)) {
-      throw new AnalysisError(
-        'Error page detected',
-        400,
-        'Target URL returned an error page',
-        false
-      );
-    }
-
-    logger.debug('Content validation passed', {
-      length: content.length,
-      preview: content.slice(0, 200)
-    });
   }
 
   private isErrorPage(content: string): boolean {

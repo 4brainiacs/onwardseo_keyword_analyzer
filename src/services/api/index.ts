@@ -1,7 +1,8 @@
-export { ApiClient, apiClient } from './client';
-export { RequestHandler } from './handlers/RequestHandler';
-export { ResponseValidator } from './validators/ResponseValidator';
-export { RetryHandler } from './handlers/RetryHandler';
+export * from './client';
+export * from './constants';
+export * from './types';
+export * from './validators';
+export * from './handlers';
 
-// Re-export types
-export type { RetryConfig } from './handlers/RetryHandler';
+// Re-export singleton instance as default
+export { apiClient as default } from './client';

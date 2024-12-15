@@ -1,5 +1,5 @@
-import { logger } from '../../utils/logger';
 import { CONTENT_FILTERS } from '../../utils/contentFilters';
+import { logger } from '../../utils/logger';
 
 export class TextProcessor {
   process(html: string): {
@@ -13,16 +13,16 @@ export class TextProcessor {
     const startTime = performance.now();
 
     try {
-      // Remove unwanted HTML elements
-      let cleanText = html.replace(/<(script|style|iframe|svg)[^>]*>[\s\S]*?<\/\1>/gi, ' ');
-      cleanText = cleanText.replace(/<[^>]+>/g, ' ');
-
-      // Apply content filters
-      CONTENT_FILTERS.forEach(pattern => {
-        cleanText = cleanText.replace(pattern, ' ');
+      let cleanText = html;
+      
+      // Apply each filter pattern
+      Object.entries(CONTENT_FILTERS.patterns).forEach(([_, patterns]) => {
+        (patterns as RegExp[]).forEach(pattern => {
+          cleanText = cleanText.replace(pattern, ' ');
+        });
       });
 
-      // Clean up whitespace
+      // Normalize whitespace
       cleanText = cleanText
         .replace(/[\r\n\t]+/g, ' ')
         .replace(/\s+/g, ' ')
@@ -39,7 +39,7 @@ export class TextProcessor {
         }
       };
     } catch (error) {
-      logger.error('Text processing failed:', error);
+      logger.error('Text processing failed:', { error });
       throw error;
     }
   }

@@ -1,4 +1,4 @@
-import { API_DEFAULTS, CONTENT_TYPES } from '../constants';
+import { API_CONSTANTS } from '../constants';
 import type { RequestConfig } from '../types';
 
 export function createRequestConfig(config: RequestConfig = {}): RequestInit {
@@ -8,23 +8,13 @@ export function createRequestConfig(config: RequestConfig = {}): RequestInit {
     setTimeout(() => controller.abort(), config.timeout);
   }
 
-  const headers = new Headers({
-    'Accept': CONTENT_TYPES.JSON,
-    'Content-Type': CONTENT_TYPES.JSON,
-    ...config.headers
-  });
-
   return {
     ...config,
     signal: controller.signal,
-    headers,
-    credentials: 'include',
-    mode: 'cors'
+    headers: {
+      [API_CONSTANTS.HEADERS.CONTENT_TYPE]: API_CONSTANTS.CONTENT_TYPES.JSON,
+      [API_CONSTANTS.HEADERS.ACCEPT]: API_CONSTANTS.CONTENT_TYPES.JSON,
+      ...config.headers
+    }
   };
-}
-
-export function buildUrl(baseUrl: string, path: string): string {
-  const base = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  return `${base}${cleanPath}`;
 }

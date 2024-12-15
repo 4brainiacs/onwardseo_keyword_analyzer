@@ -36,7 +36,8 @@ export const ERROR_MESSAGES = {
     INVALID_CONTENT: 'Invalid content type',
     EMPTY_RESPONSE: 'Empty response received',
     MALFORMED_RESPONSE: 'Malformed response received',
-    MISSING_CONTENT_TYPE: 'Missing content type header'
+    MISSING_CONTENT_TYPE: 'Missing content type header',
+    INVALID_RESPONSE: 'Invalid response format'
   },
   SERVER: {
     INTERNAL_ERROR: 'Internal server error',
@@ -44,3 +45,6 @@ export const ERROR_MESSAGES = {
     MAINTENANCE: 'Server is under maintenance'
   }
 } as const;
+
+export type ApiConstants = typeof API_CONSTANTS;
+export type ErrorMessages = typeof ERROR_MESSAGES;

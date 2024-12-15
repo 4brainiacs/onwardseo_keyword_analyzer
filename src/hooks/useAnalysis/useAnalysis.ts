@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '../../services/api/client';
+import { apiClient } from '../../services/api';
 import { AnalysisError } from '../../services/errors';
 import { logger } from '../../utils/logger';
 import type { AnalysisResult } from '../../types';
-import type { UseAnalysisOptions, UseAnalysisResult } from './types';
+import type { UseAnalysisOptions } from './types';
 
-export function useAnalysis(options: UseAnalysisOptions = {}): UseAnalysisResult {
+export function useAnalysis(options: UseAnalysisOptions = {}) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -16,38 +16,20 @@ export function useAnalysis(options: UseAnalysisOptions = {}): UseAnalysisResult
       setError(null);
 
       logger.info('Starting analysis', { url });
-      
       const data = await apiClient.analyze(url);
       
-      if (!data || typeof data !== 'object') {
-        throw new AnalysisError(
-          'Invalid server response',
-          500,
-          'The server returned an unexpected data format',
-          true
-        );
-      }
-
       setResult(data);
       setIsLoading(false);
       options.onSuccess?.(data);
-
     } catch (error) {
-      const analysisError = error instanceof AnalysisError 
-        ? error 
-        : new AnalysisError(
-            'Analysis failed',
-            500,
-            error instanceof Error ? error.message : 'An unexpected error occurred',
-            true
-          );
-
-      logger.error('Analysis failed:', {
-        error: analysisError,
-        url,
-        component: 'useAnalysis'
+      const analysisError = error instanceof AnalysisError ? error : new AnalysisError({
+        message: 'Analysis failed',
+        status: 500,
+        details: error instanceof Error ? error.message : 'An unexpected error occurred',
+        retryable: true
       });
 
+      logger.error('Analysis failed', { error: analysisError });
       setError(analysisError);
       setIsLoading(false);
       options.onError?.(analysisError);

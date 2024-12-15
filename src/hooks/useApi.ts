@@ -1,25 +1,24 @@
 import { useState, useCallback } from 'react';
-import { ApiState, ApiStatus } from '../services/api/types';
 import { apiClient } from '../services/api/client';
 import { logger } from '../utils/logger';
-import type { AnalysisResult } from '../types';
+import type { ApiState, LoadingState } from '../services/api/types';
 
-interface UseApiOptions {
-  onSuccess?: (data: AnalysisResult) => void;
+interface UseApiOptions<T> {
+  onSuccess?: (data: T) => void;
   onError?: (error: Error) => void;
   timeout?: number;
 }
 
-export function useApi(options: UseApiOptions = {}) {
-  const [state, setState] = useState<ApiState>({
+export function useApi<T>(options: UseApiOptions<T> = {}) {
+  const [state, setState] = useState<ApiState<T>>({
     status: 'idle',
     error: null,
     data: null,
     retryCount: 0
   });
 
-  const setStatus = (status: ApiStatus) => {
-    setState(prev => ({ ...prev, status }));
+  const setStatus = (status: LoadingState) => {
+    setState((prevState: ApiState<T>) => ({ ...prevState, status }));
   };
 
   const request = useCallback(async (
@@ -27,33 +26,27 @@ export function useApi(options: UseApiOptions = {}) {
     requestOptions: RequestInit = {}
   ): Promise<void> => {
     setStatus('loading');
-    setState(prev => ({ ...prev, error: null }));
+    setState((prevState: ApiState<T>) => ({ ...prevState, error: null }));
 
     try {
-      const data = await apiClient.request<AnalysisResult>(endpoint, {
-        ...requestOptions,
-        headers: {
-          'Content-Type': 'application/json',
-          ...requestOptions.headers,
-        },
-      });
+      const data = await apiClient.analyze(endpoint);
 
-      setState(prev => ({
+      setState((prevState: ApiState<T>) => ({
+        ...prevState,
         status: 'success',
         data,
-        error: null,
-        retryCount: prev.retryCount
+        error: null
       }));
 
-      options.onSuccess?.(data);
+      options.onSuccess?.(data as T);
     } catch (error) {
-      logger.error('API request failed:', error);
+      logger.error('API request failed:', { error });
 
-      setState(prev => ({
+      setState((prevState: ApiState<T>) => ({
+        ...prevState,
         status: 'error',
         error: error as Error,
-        data: null,
-        retryCount: prev.retryCount + 1,
+        retryCount: prevState.retryCount + 1,
         lastAttempt: new Date()
       }));
 

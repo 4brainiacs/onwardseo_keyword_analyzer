@@ -1,12 +1,10 @@
-import { load } from 'cheerio';
+import type { CheerioAPI, Element } from 'cheerio';
 import { logger } from '../../../utils/logger';
 import type { PageHeadings } from '../../../types';
 
 export class HeadingAnalyzer {
-  extract(html: string): PageHeadings {
+  extract($: CheerioAPI): PageHeadings {
     try {
-      const $ = load(html);
-
       return {
         h1: this.extractHeadingsByTag($, 'h1'),
         h2: this.extractHeadingsByTag($, 'h2'),
@@ -14,15 +12,15 @@ export class HeadingAnalyzer {
         h4: this.extractHeadingsByTag($, 'h4')
       };
     } catch (error) {
-      logger.error('Heading extraction failed:', error);
+      logger.error('Heading extraction failed:', { error });
       return { h1: [], h2: [], h3: [], h4: [] };
     }
   }
 
-  private extractHeadingsByTag($: cheerio.Root, tag: string): string[] {
+  private extractHeadingsByTag($: CheerioAPI, tag: string): string[] {
     return $(tag)
-      .map((_, el) => $(el).text().trim())
+      .map((index: number, element: Element): string => $(element).text().trim())
       .get()
-      .filter(text => text.length > 0);
+      .filter((text: string): boolean => text.length > 0);
   }
 }

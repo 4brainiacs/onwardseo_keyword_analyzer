@@ -20,3 +20,7 @@ export interface ErrorMetadata {
   requestId?: string;
   context?: Record<string, unknown>;
 }
+
+// Export types
+export type { ValidationResult as default };
+export type { ValidationContext, ErrorMetadata };

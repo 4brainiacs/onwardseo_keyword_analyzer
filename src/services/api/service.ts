@@ -1,46 +1,46 @@
-import type { ApiClient } from './client';
-import type { AnalysisResult } from '../../types';
+import { AnalysisError } from '../errors';
 import { logger } from '../../utils/logger';
-import { AnalysisError } from '../errors/AnalysisError';
-import { validateAnalysisResult } from '../validation/validator';
+import { ApiClient } from './client/ApiClient';
+import type { AnalysisResult } from '../../types';
 
 export class ApiService {
-  constructor(private client: ApiClient) {}
+  private client: ApiClient;
 
-  async analyzeUrl(url: string): Promise<AnalysisResult> {
+  constructor() {
+    this.client = new ApiClient();
+  }
+
+  async analyze(url: string): Promise<AnalysisResult> {
     try {
-      logger.info('Starting URL analysis', { url });
+      logger.info('Starting analysis', { url });
       
-      const response = await this.client.request<AnalysisResult>('/analyze', {
-        method: 'POST',
-        body: JSON.stringify({ url })
-      });
-
-      try {
-        validateAnalysisResult(response);
-        logger.info('Analysis completed successfully');
-        return response;
-      } catch (validationError) {
-        logger.error('Response validation failed:', validationError);
-        throw new AnalysisError(
-          'Invalid analysis result',
-          500,
-          'The server returned an unexpected data format',
-          true
-        );
+      const result = await this.client.analyze(url);
+      
+      if (!result) {
+        throw new AnalysisError({
+          message: 'Invalid response',
+          status: 500,
+          details: 'Server returned empty response',
+          retryable: true
+        });
       }
+
+      return result;
     } catch (error) {
+      logger.error('Analysis failed:', { error });
+      
       if (error instanceof AnalysisError) {
         throw error;
       }
 
-      logger.error('Analysis failed:', error);
-      throw new AnalysisError(
-        'Analysis failed',
-        500,
-        error instanceof Error ? error.message : 'An unexpected error occurred',
-        true
-      );
+      throw new AnalysisError({
+        message: 'Analysis failed',
+        status: 500,
+        details: error instanceof Error ? error.message : 'An unexpected error occurred',
+        retryable: true
+      });
     }
   }
 }
+
+export const apiService = new ApiService();

@@ -1,22 +1,17 @@
-import { load } from 'cheerio';
 import { logger } from '../../../utils/logger';
 import { CONTENT_FILTERS } from '../../../utils/contentFilters';
+import type { ContentPatterns } from '../../../utils/contentFilters';
 
 export class TextAnalyzer {
   process(html: string) {
     try {
-      const $ = load(html);
-
-      // Remove unwanted elements
-      $('script, style, noscript, iframe, svg, nav, header, footer').remove();
-      $('.navigation, .menu, .footer, .header, .sidebar').remove();
-
-      // Get text content
-      let text = $('body').text();
+      let text = html;
 
       // Apply content filters
-      CONTENT_FILTERS.forEach(pattern => {
-        text = text.replace(pattern, ' ');
+      Object.entries(CONTENT_FILTERS.patterns).forEach(([_, patterns]: [string, RegExp[]]) => {
+        patterns.forEach((pattern: RegExp) => {
+          text = text.replace(pattern, ' ');
+        });
       });
 
       // Clean up text

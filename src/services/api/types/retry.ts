@@ -1,6 +1,19 @@
 export interface RetryConfig {
   maxAttempts: number;
-  initialDelay: number;
+  baseDelay: number;
   maxDelay: number;
-  shouldRetry: (error: unknown, attempt: number) => boolean;
 }
+
+export interface RetryContext {
+  attempt: number;
+  error: unknown;
+  startTime: number;
+  retryCount: number;
+}
+
+export interface RetryOptions {
+  shouldRetry?: (error: unknown, context: RetryContext) => boolean;
+  onRetry?: (context: RetryContext) => void;
+}
+
+export type { RetryConfig as default };

@@ -41,4 +41,12 @@ export class AnalysisError extends Error {
       stack: this.stack
     };
   }
+
+  static fromError(error: unknown): AnalysisError {
+    return new AnalysisError({
+      message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      status: 500,
+      retryable: true
+    });
+  }
 }

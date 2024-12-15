@@ -1,43 +1,26 @@
-// Response types
-export interface ApiSuccessResponse<T> {
-  success: true;
-  data: T;
-  timestamp?: string;
-  requestId?: string;
-}
+export * from './responses';
+export * from './validation';
+export * from './retry';
+export * from './requests';
 
-export interface ApiErrorResponse {
-  success: false;
-  error: string;
-  details?: string;
-  status?: number;
-  retryable?: boolean;
-  retryAfter?: number;
-  code?: string;
-  timestamp?: string;
-  requestId?: string;
-}
-
-export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
-
-// Configuration types
-export interface RetryConfig {
-  maxAttempts: number;
-  baseDelay: number;
-  maxDelay: number;
-}
-
-export interface RequestConfig extends RequestInit {
-  timeout?: number;
-  retries?: number;
-}
-
-// State types
 export type LoadingState = 'idle' | 'loading' | 'retrying' | 'success' | 'error';
 
-export interface RequestState {
+export interface ApiState<T = unknown> {
   status: LoadingState;
   error: Error | null;
+  data: T | null;
   retryCount: number;
   lastAttempt?: Date;
 }
+
+export interface ApiStatus {
+  isLoading: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+}
+
+// Re-export common types
+export type { ApiResponse } from './responses';
+export type { ValidationResult, ErrorMetadata } from './validation';
+export type { RetryConfig, RetryContext } from './retry';
+export type { RequestConfig, ApiClientConfig } from './requests';

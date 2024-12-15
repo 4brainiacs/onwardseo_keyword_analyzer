@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '../../services/api/client';
+import { apiClient } from '../../services/api';
 import { AnalysisError } from '../../services/errors';
 import { logger } from '../../utils/logger';
 import type { AnalysisResult } from '../../types';
@@ -51,4 +51,4 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
   };
 }
 
-export type { UseAnalysisOptions, UseAnalysisResult } from './types';
+export type { UseAnalysisOptions } from './types';

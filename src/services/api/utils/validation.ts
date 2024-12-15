@@ -1,43 +1,39 @@
-import { StatusCodes } from 'http-status-codes';
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS, ERROR_MESSAGES } from '../constants';
-import type { ApiResponse } from '../types/responses';
+import { API_CONSTANTS } from '../constants';
+import type { ApiResponse } from '../types';
 
 export function validateContentType(response: Response): void {
-  const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE)?.toLowerCase();
+  const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
   
   if (!contentType) {
-    logger.error('Missing content type header');
-    throw new AnalysisError(
-      ERROR_MESSAGES.VALIDATION.CONTENT_TYPE,
-      StatusCodes.UNSUPPORTED_MEDIA_TYPE,
-      ERROR_MESSAGES.VALIDATION.MISSING_CONTENT_TYPE,
-      true
-    );
+    throw new AnalysisError({
+      message: API_CONSTANTS.ERROR_MESSAGES.VALIDATION.MISSING_CONTENT_TYPE,
+      status: 415,
+      details: 'Response is missing content type header',
+      retryable: true
+    });
   }
 
-  // Check if content type contains application/json, ignoring charset
-  if (!contentType.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
-    logger.error('Invalid content type:', { contentType });
-    throw new AnalysisError(
-      ERROR_MESSAGES.VALIDATION.CONTENT_TYPE,
-      StatusCodes.UNSUPPORTED_MEDIA_TYPE,
-      `Expected JSON but received: ${contentType}`,
-      true
-    );
+  if (!contentType.toLowerCase().includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
+    throw new AnalysisError({
+      message: API_CONSTANTS.ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
+      status: 415,
+      details: `Expected JSON but received: ${contentType}`,
+      retryable: false
+    });
   }
 }
 
 export function validateApiResponse<T>(response: ApiResponse<T>): T {
-  if (!response.success || !response.data) {
-    throw new AnalysisError(
-      response.error || ERROR_MESSAGES.VALIDATION.INVALID_RESPONSE,
-      StatusCodes.BAD_GATEWAY,
-      response.details || 'The server returned an unsuccessful response',
-      true,
-      response.retryAfter
-    );
+  if (!response.success) {
+    throw new AnalysisError({
+      message: response.error,
+      status: response.status,
+      details: response.details,
+      retryable: response.retryable,
+      retryAfter: response.retryAfter
+    });
   }
 
   return response.data;
