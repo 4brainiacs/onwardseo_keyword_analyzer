@@ -1,64 +1,32 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS } from '../constants';
+import type { ApiConfig } from '../types';
 
 export class RequestHandler {
-  async sendRequest<T>(url: string, options: RequestInit): Promise<T> {
+  constructor(private config: ApiConfig) {}
+
+  async sendRequest(url: string, options: RequestInit): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      API_CONSTANTS.TIMEOUTS.DEFAULT
-    );
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
     try {
-      logger.info('Making API request', { url, method: options.method });
+      logger.debug('Making request', { url, method: options.method });
 
       const response = await fetch(url, {
         ...options,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          ...options.headers
-        }
+        signal: controller.signal
       });
 
-      // Read response text immediately to avoid timing issues
-      const text = await response.text();
-      
-      logger.debug('Response received', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        bodyPreview: text.slice(0, 200)
-      });
-
-      // Validate content type
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/json')) {
+      if (!response.ok) {
         throw new AnalysisError(
-          'Invalid content type',
-          415,
-          `Expected JSON but received: ${contentType}`,
-          false
+          'Request failed',
+          response.status,
+          `Server returned status ${response.status}`,
+          response.status >= 500
         );
       }
 
-      // Parse JSON response
-      let data: T;
-      try {
-        data = JSON.parse(text);
-      } catch (error) {
-        logger.error('JSON parse error:', { error, text: text.slice(0, 200) });
-        throw new AnalysisError(
-          'Invalid JSON response',
-          500,
-          'Server returned invalid JSON data',
-          true
-        );
-      }
-
-      return data;
+      return response;
     } catch (error) {
       if (error instanceof AnalysisError) {
         throw error;
@@ -73,11 +41,10 @@ export class RequestHandler {
         );
       }
 
-      logger.error('Request failed:', error);
       throw new AnalysisError(
-        'Request failed',
-        500,
-        error instanceof Error ? error.message : 'An unexpected error occurred',
+        'Network error',
+        503,
+        error instanceof Error ? error.message : 'Failed to connect to server',
         true
       );
     } finally {
