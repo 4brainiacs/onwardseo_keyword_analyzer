@@ -1,5 +1,6 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants';
 import type { ApiResponse } from '../types';
 
 export class ApiService {
@@ -17,34 +18,35 @@ export class ApiService {
       });
 
       if (!response.ok) {
-        throw new AnalysisError({
-          message: `HTTP ${response.status}`,
-          status: response.status,
-          details: response.statusText,
-          retryable: response.status >= 500
-        });
+        throw new AnalysisError(
+          'Request failed',
+          response.status,
+          `Server returned status ${response.status}`,
+          response.status >= 500
+        );
       }
 
-      const data = (await response.json()) as ApiResponse<T>;
+      const data = await response.json() as ApiResponse<T>;
       
       if (!data.success) {
-        throw new AnalysisError({
-          message: data.error,
-          status: response.status,
-          details: data.details,
-          retryable: data.retryable
-        });
+        throw new AnalysisError(
+          data.error || ERROR_MESSAGES.VALIDATION.INVALID_RESPONSE,
+          response.status,
+          data.details || 'Server returned unsuccessful response',
+          data.retryable || false,
+          data.retryAfter
+        );
       }
 
-      return data.data;
+      return data.data as T;
     } catch (error) {
       logger.error('API request failed:', { error });
-      throw error instanceof AnalysisError ? error : new AnalysisError({
-        message: 'Request failed',
-        status: 500,
-        details: error instanceof Error ? error.message : 'An unexpected error occurred',
-        retryable: true
-      });
+      throw error instanceof AnalysisError ? error : new AnalysisError(
+        'Request failed',
+        HTTP_STATUS.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        true
+      );
     }
   }
 }

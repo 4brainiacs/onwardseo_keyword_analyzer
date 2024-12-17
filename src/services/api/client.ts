@@ -1,6 +1,8 @@
-import { AnalysisError } from '../errors/AnalysisError';
+import { AnalysisError } from '../errors';
 import { logger } from '../../utils/logger';
-import type { ApiResponse, AnalysisResult } from '../../types';
+import { HTTP_STATUS, ERROR_MESSAGES } from './constants';
+import type { AnalysisResult } from '../../types/analysis';
+import type { AnalysisApiResponse } from '../../types/api';
 
 class ApiClient {
   private baseUrl: string;
@@ -26,17 +28,29 @@ class ApiClient {
         throw new AnalysisError(
           'Request failed',
           response.status,
-          `Server returned status ${response.status}`
+          `Server returned status ${response.status}`,
+          response.status >= 500
         );
       }
 
-      const data = await response.json() as ApiResponse<AnalysisResult>;
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new AnalysisError(
+          ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
+          HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE,
+          `Expected JSON but received: ${contentType}`,
+          false
+        );
+      }
+
+      const data = await response.json() as AnalysisApiResponse;
 
       if (!data.success || !data.data) {
         throw new AnalysisError(
-          'Invalid response format',
-          500,
-          'Server returned unsuccessful response'
+          ERROR_MESSAGES.VALIDATION.INVALID_RESPONSE,
+          HTTP_STATUS.BAD_GATEWAY,
+          'Server returned unsuccessful response',
+          true
         );
       }
 
@@ -48,8 +62,9 @@ class ApiClient {
 
       throw new AnalysisError(
         'Request failed',
-        500,
-        error instanceof Error ? error.message : 'An unexpected error occurred'
+        HTTP_STATUS.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        true
       );
     }
   }

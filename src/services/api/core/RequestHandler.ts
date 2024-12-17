@@ -1,18 +1,15 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { validateResponse } from '../validators/responseValidator';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants';
 import type { RequestConfig } from '../types';
 
 export class RequestHandler {
-  async sendRequest<T>(url: string, config: RequestConfig): Promise<T> {
+  async sendRequest(url: string, config: RequestConfig): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(
-      () => controller.abort('Request timeout'),
-      config.timeout || 30000
-    );
+    const timeoutId = setTimeout(() => controller.abort(), config.timeout || 30000);
 
     try {
-      logger.debug('Making request:', { url, method: config.method });
+      logger.debug('Making request', { url, method: config.method });
 
       const response = await fetch(url, {
         ...config,
@@ -24,37 +21,34 @@ export class RequestHandler {
         }
       });
 
-      // Read response text immediately to avoid timing issues
-      const text = await response.text();
-      
-      logger.debug('Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
-        bodyPreview: text.slice(0, 200)
-      });
+      if (!response.ok) {
+        throw new AnalysisError(
+          'Request failed',
+          response.status,
+          `Server returned status ${response.status}`,
+          response.status >= 500
+        );
+      }
 
-      return await validateResponse(response, text);
+      return response;
     } catch (error) {
-      logger.error('Request failed:', { error, url });
-      
       if (error instanceof AnalysisError) {
         throw error;
       }
 
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         throw new AnalysisError(
-          'Request timeout',
-          408,
-          'The request took too long to complete',
+          ERROR_MESSAGES.NETWORK.TIMEOUT,
+          HTTP_STATUS.REQUEST_TIMEOUT,
+          ERROR_MESSAGES.NETWORK.TIMEOUT_DETAILS,
           true
         );
       }
 
       throw new AnalysisError(
-        'Request failed',
-        500,
-        error instanceof Error ? error.message : 'An unexpected error occurred',
+        ERROR_MESSAGES.NETWORK.CONNECTION,
+        HTTP_STATUS.SERVICE_UNAVAILABLE,
+        error instanceof Error ? error.message : 'Failed to connect to server',
         true
       );
     } finally {

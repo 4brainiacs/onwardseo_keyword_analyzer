@@ -19,4 +19,10 @@ export interface ErrorMetadata {
   context?: Record<string, unknown>;
 }
 
+export interface ErrorResponse {
+  message?: string;
+  details?: string;
+  status?: number;
+}
+
 export type { ErrorMetadata as default };

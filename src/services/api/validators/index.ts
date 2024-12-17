@@ -1,3 +1,4 @@
-export { validateResponse } from './responseValidator';
-export { validateContentType } from './contentTypeValidator';
+export { ContentTypeValidator } from './ContentTypeValidator';
+export { ResponseValidator } from './ResponseValidator';
+export { RequestValidator } from './RequestValidator';
 export type { ValidationResult } from './types';

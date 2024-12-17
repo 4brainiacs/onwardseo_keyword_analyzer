@@ -4,8 +4,8 @@ import type { AnalysisResult } from '../types';
 export function analyzeContent(html: string): AnalysisResult {
   // Remove unwanted content using filters
   let cleanText = html;
-  Object.values(CONTENT_FILTERS.patterns).forEach(patterns => {
-    patterns.forEach(pattern => {
+  Object.values(CONTENT_FILTERS.patterns).forEach((patterns: RegExp[]) => {
+    patterns.forEach((pattern: RegExp) => {
       cleanText = cleanText.replace(pattern, ' ');
     });
   });

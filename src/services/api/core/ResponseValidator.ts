@@ -2,6 +2,7 @@ import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
 import { HTTP_STATUS, ERROR_MESSAGES } from '../constants';
 import type { ApiResponse } from '../types';
+import type { ErrorResponse } from '../../../types/errors';
 
 export class ResponseValidator {
   async validateResponse<T>(response: Response): Promise<T> {
@@ -69,20 +70,19 @@ export class ResponseValidator {
     }
   }
 
-  private async parseErrorResponse(response: Response): Promise<{
-    message?: string;
-    details?: string;
-  }> {
+  private async parseErrorResponse(response: Response): Promise<ErrorResponse> {
     try {
       const data = await response.json();
       return {
         message: data.error,
-        details: data.details
+        details: data.details,
+        status: response.status
       };
     } catch {
       return {
         message: `HTTP ${response.status}`,
-        details: response.statusText
+        details: response.statusText,
+        status: response.status
       };
     }
   }

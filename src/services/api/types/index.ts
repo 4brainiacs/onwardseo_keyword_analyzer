@@ -1,4 +1,6 @@
-export interface ApiResponse<T> {
+import type { AnalysisResult } from '../../../types/analysis';
+
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -6,9 +8,17 @@ export interface ApiResponse<T> {
   retryable?: boolean;
   retryAfter?: number;
   status?: number;
+  code?: string;
 }
 
-export interface RequestConfig {
+export interface ApiConfig {
+  baseUrl: string;
+  timeout: number;
+  retries: number;
+  headers?: Record<string, string>;
+}
+
+export interface RequestConfig extends RequestInit {
   timeout?: number;
   retries?: number;
   headers?: Record<string, string>;
@@ -28,4 +38,4 @@ export enum LoadingState {
   RETRYING = 'retrying'
 }
 
-export type { ApiConfig } from '../../types/api';
+export type AnalysisApiResponse = ApiResponse<AnalysisResult>;
