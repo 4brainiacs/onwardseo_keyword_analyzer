@@ -1,26 +1,31 @@
-import { Environment } from './environment';
+import { z } from 'zod';
 
-export function validateEnvironment(): Environment {
-  const apiKey = import.meta.env.VITE_SCRAPINGBEE_API_KEY || '';
-  const mode = import.meta.env.MODE || 'development';
-  
-  if (!['development', 'production', 'test'].includes(mode)) {
-    throw new Error('Invalid MODE environment variable');
-  }
+const envSchema = z.object({
+  api: z.object({
+    baseUrl: z.string().min(1),
+    timeout: z.number().min(1000).default(30000)
+  }),
+  app: z.object({
+    env: z.enum(['development', 'production', 'test']),
+    isDev: z.boolean(),
+    isProd: z.boolean(),
+    isTest: z.boolean()
+  })
+});
 
-  return {
+export function validateEnvironment() {
+  const config = {
     api: {
-      baseUrl: import.meta.env.VITE_API_URL || '/.netlify/functions'
-    },
-    scrapingBee: {
-      apiKey,
-      baseUrl: 'https://app.scrapingbee.com/api/v1'
+      baseUrl: import.meta.env.VITE_API_URL || '/.netlify/functions',
+      timeout: 30000
     },
     app: {
-      env: mode as Environment['app']['env'],
-      isDev: mode === 'development',
-      isProd: mode === 'production',
-      isTest: mode === 'test'
+      env: import.meta.env.MODE as 'development' | 'production' | 'test',
+      isDev: import.meta.env.DEV,
+      isProd: import.meta.env.PROD,
+      isTest: import.meta.env.MODE === 'test'
     }
   };
+
+  return envSchema.parse(config);
 }

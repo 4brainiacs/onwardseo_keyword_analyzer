@@ -3,10 +3,15 @@ import { WordCount } from './WordCount';
 import { PageStructure } from './PageStructure';
 import { KeywordTable } from './KeywordTable';
 import { ScrapedContent } from './ScrapedContent';
-import type { AnalysisResult } from '../../types/analysis';
+import type { AnalysisResult, ContentCategory } from '../../types';
 
 export interface AnalysisResultsProps {
   result: AnalysisResult;
+}
+
+interface Classification {
+  primaryCategory: ContentCategory;
+  secondaryCategories: ContentCategory[];
 }
 
 export function AnalysisResults({ result }: AnalysisResultsProps): JSX.Element {
@@ -19,7 +24,7 @@ export function AnalysisResults({ result }: AnalysisResultsProps): JSX.Element {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <PageStructure 
           title={result.title} 
-          classification={result.classification}
+          classification={result.classification as Classification}
           headings={result.headings}
           metaDescription={result.metaDescription} 
         />

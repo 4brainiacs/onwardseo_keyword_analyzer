@@ -15,21 +15,21 @@ export class Logger {
     return Logger.instance;
   }
 
-  debug(message: string, data?: unknown, options?: LogOptions): void {
+  debug(message: string, data?: Record<string, unknown>, options?: LogOptions): void {
     if (this.isDev) {
       this.log('DEBUG', message, data, options);
     }
   }
 
-  info(message: string, data?: unknown, options?: LogOptions): void {
+  info(message: string, data?: Record<string, unknown>, options?: LogOptions): void {
     this.log('INFO', message, data, options);
   }
 
-  warn(message: string, data?: unknown, options?: LogOptions): void {
+  warn(message: string, data?: Record<string, unknown>, options?: LogOptions): void {
     this.log('WARN', message, data, options);
   }
 
-  error(message: string | Error, data?: unknown, options?: LogOptions): void {
+  error(message: string | Error, data?: Record<string, unknown>, options?: LogOptions): void {
     const errorMessage = message instanceof Error ? message.message : message;
     const errorData = message instanceof Error 
       ? { 
@@ -45,7 +45,7 @@ export class Logger {
     this.log('ERROR', errorMessage, errorData, options);
   }
 
-  private log(level: LogLevel, message: string, data?: unknown, options: LogOptions = {}): void {
+  private log(level: LogLevel, message: string, data?: Record<string, unknown>, options: LogOptions = {}): void {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -80,11 +80,11 @@ export class Logger {
     }
   }
 
-  private sanitizeData(data: unknown): unknown {
+  private sanitizeData(data?: Record<string, unknown>): Record<string, unknown> | undefined {
     if (!data) return undefined;
 
     try {
-      const sanitized = { ...data as Record<string, unknown> };
+      const sanitized = { ...data };
       const sensitiveKeys = [
         'password', 'token', 'key', 'secret', 'authorization',
         'api_key', 'apiKey', 'auth'
@@ -98,7 +98,7 @@ export class Logger {
 
       return sanitized;
     } catch {
-      return '[Error sanitizing log data]';
+      return { error: '[Error sanitizing log data]' };
     }
   }
 

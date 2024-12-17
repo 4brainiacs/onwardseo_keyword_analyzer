@@ -1,40 +1,67 @@
-import { AnalysisError } from '../../errors';
+import { AnalysisError } from '../../errors/AnalysisError';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS } from '../constants';
 import type { ApiResponse } from '../types';
 
-export function validateContentType(response: Response): void {
-  const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
-  
-  if (!contentType) {
-    throw new AnalysisError({
-      message: API_CONSTANTS.ERROR_MESSAGES.VALIDATION.MISSING_CONTENT_TYPE,
-      status: 415,
-      details: 'Response is missing content type header',
-      retryable: true
-    });
-  }
+export async function validateResponse<T>(response: Response): Promise<T> {
+  try {
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new AnalysisError({
+        message: 'Invalid content type',
+        status: 415,
+        details: `Expected JSON but received: ${contentType}`,
+        retryable: false
+      });
+    }
 
-  if (!contentType.toLowerCase().includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
-    throw new AnalysisError({
-      message: API_CONSTANTS.ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
-      status: 415,
-      details: `Expected JSON but received: ${contentType}`,
-      retryable: false
+    if (!response.ok) {
+      const error = await parseErrorResponse(response);
+      throw new AnalysisError({
+        message: error.message || 'Request failed',
+        status: response.status,
+        details: error.details || `Server returned status ${response.status}`,
+        retryable: response.status >= 500
+      });
+    }
+
+    const data = await response.json() as ApiResponse<T>;
+
+    if (!data.success || !data.data) {
+      throw new AnalysisError({
+        message: data.error || 'Invalid response format',
+        status: data.status || 500,
+        details: data.details || 'Server returned unsuccessful response',
+        retryable: data.retryable || false,
+        retryAfter: data.retryAfter
+      });
+    }
+
+    return data.data;
+  } catch (error) {
+    logger.error('Response validation failed:', error);
+    throw error instanceof AnalysisError ? error : new AnalysisError({
+      message: 'Failed to validate response',
+      status: 500,
+      details: error instanceof Error ? error.message : 'Unknown error occurred',
+      retryable: true
     });
   }
 }
 
-export function validateApiResponse<T>(response: ApiResponse<T>): T {
-  if (!response.success) {
-    throw new AnalysisError({
-      message: response.error,
-      status: response.status,
-      details: response.details,
-      retryable: response.retryable,
-      retryAfter: response.retryAfter
-    });
+async function parseErrorResponse(response: Response): Promise<{
+  message?: string;
+  details?: string;
+}> {
+  try {
+    const data = await response.json();
+    return {
+      message: data.error,
+      details: data.details
+    };
+  } catch {
+    return {
+      message: `HTTP ${response.status}`,
+      details: response.statusText
+    };
   }
-
-  return response.data;
 }
