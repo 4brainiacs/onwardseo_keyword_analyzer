@@ -20,3 +20,6 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module 'jsdom';
+declare module 'dompurify';

@@ -14,3 +14,7 @@ export interface LogOptions {
   component?: string;
   tags?: string[];
 }
+
+export interface LogContext {
+  [key: string]: unknown;
+}

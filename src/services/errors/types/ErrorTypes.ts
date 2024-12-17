@@ -1,19 +1,12 @@
 export enum ErrorCode {
-  // Network errors
   NETWORK_ERROR = 'NETWORK_ERROR',
   TIMEOUT = 'TIMEOUT',
-  
-  // API errors
   INVALID_RESPONSE = 'INVALID_RESPONSE',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
   SERVER_ERROR = 'SERVER_ERROR',
-  
-  // Storage errors
-  STORAGE_ERROR = 'STORAGE_ERROR',
-  
-  // Analysis errors
   ANALYSIS_ERROR = 'ANALYSIS_ERROR',
-  SCRAPING_ERROR = 'SCRAPING_ERROR'
+  SCRAPING_ERROR = 'SCRAPING_ERROR',
+  STORAGE_ERROR = 'STORAGE_ERROR'
 }
 
 export interface ErrorMetadata {
@@ -26,5 +19,4 @@ export interface ErrorMetadata {
   context?: Record<string, unknown>;
 }
 
-// Re-export for convenience
 export type { ErrorMetadata as default };

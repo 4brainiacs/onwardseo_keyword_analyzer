@@ -8,18 +8,16 @@ export interface ApiResponse<T> {
   status?: number;
 }
 
-export interface ApiError {
-  message: string;
-  details?: string;
-  status: number;
-  retryable: boolean;
-  retryAfter?: number;
-  code?: string;
-}
-
-export interface RequestConfig extends RequestInit {
+export interface RequestConfig {
   timeout?: number;
   retries?: number;
+  headers?: Record<string, string>;
+}
+
+export interface RetryConfig {
+  maxAttempts: number;
+  baseDelay: number;
+  maxDelay: number;
 }
 
 export enum LoadingState {
@@ -30,9 +28,4 @@ export enum LoadingState {
   RETRYING = 'retrying'
 }
 
-export interface ApiState<T> {
-  status: LoadingState;
-  data: T | null;
-  error: Error | null;
-  retryCount: number;
-}
+export type { ApiConfig } from '../../types/api';

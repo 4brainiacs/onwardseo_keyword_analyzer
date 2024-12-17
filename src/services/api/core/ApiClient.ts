@@ -1,58 +1,68 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { RequestHandler } from '../handlers/RequestHandler';
-import { ResponseHandler } from '../handlers/ResponseHandler';
-import { RetryHandler } from '../handlers/RetryHandler';
-import type { AnalysisResult } from '../../../types';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants';
+import type { ApiConfig } from '../types';
 
 export class ApiClient {
-  private baseUrl: string;
-  private requestHandler: RequestHandler;
-  private responseHandler: ResponseHandler;
-  private retryHandler: RetryHandler;
+  constructor(private config: ApiConfig) {}
 
-  constructor() {
-    this.baseUrl = window.__RUNTIME_CONFIG__?.VITE_API_URL || '/.netlify/functions';
-    this.requestHandler = new RequestHandler();
-    this.responseHandler = new ResponseHandler();
-    this.retryHandler = new RetryHandler({
-      maxAttempts: 3,
-      baseDelay: 2000,
-      maxDelay: 10000
-    });
-  }
+  async analyze(url: string): Promise<any> {
+    try {
+      logger.info('Starting URL analysis', { url });
 
-  async analyze(url: string): Promise<AnalysisResult> {
-    return this.retryHandler.execute(async () => {
-      try {
-        logger.info('Starting analysis', { url });
+      const response = await fetch(`${this.config.baseUrl}/api/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ url })
+      });
 
-        const response = await this.requestHandler.sendRequest(
-          `${this.baseUrl}/analyze`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ url })
-          }
+      if (!response.ok) {
+        throw new AnalysisError(
+          'Request failed',
+          response.status,
+          `Server returned status ${response.status}`,
+          response.status >= 500
         );
-
-        return await this.responseHandler.handleResponse<AnalysisResult>(response);
-      } catch (error) {
-        logger.error('API request failed', { error });
-        
-        if (error instanceof AnalysisError) {
-          throw error;
-        }
-
-        throw new AnalysisError({
-          message: 'Request failed',
-          status: 500,
-          details: error instanceof Error ? error.message : 'An unexpected error occurred',
-          retryable: true
-        });
       }
-    }, 'analysis');
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        throw new AnalysisError(
+          ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
+          HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE,
+          `Expected JSON but received: ${contentType}`,
+          false
+        );
+      }
+
+      const data = await response.json();
+      
+      if (!data.success || !data.data) {
+        throw new AnalysisError(
+          ERROR_MESSAGES.VALIDATION.INVALID_RESPONSE,
+          HTTP_STATUS.BAD_GATEWAY,
+          'Server returned unsuccessful response',
+          true
+        );
+      }
+
+      return data.data;
+    } catch (error) {
+      logger.error('API request failed:', error);
+      
+      if (error instanceof AnalysisError) {
+        throw error;
+      }
+
+      throw new AnalysisError(
+        'Request failed',
+        HTTP_STATUS.INTERNAL_ERROR,
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        true
+      );
+    }
   }
 }
