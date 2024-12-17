@@ -2,7 +2,6 @@
   "compilerOptions": {
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "experimentalDecorators": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
@@ -20,24 +19,26 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
-    }
+      "@/*": ["./src/*"]
+    },
+    "types": [
+      "node",
+      "jest",
+      "vite/client",
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ]
   },
   "include": [
     "src",
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "src/**/*.d.ts"
+    "vite.config.ts",
+    "vitest.config.ts"
   ],
   "exclude": [
     "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "src/__tests__"
+    "dist"
   ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
