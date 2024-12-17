@@ -18,17 +18,8 @@
   port = 8888
   publish = "dist"
 
-[[headers]]
-  for = "/api/*"
-    [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, X-Request-ID"
-    Content-Type = "application/json"
-    Cache-Control = "no-cache"
-
 [[redirects]]
-  from = "/api/*"
+  from = "/.netlify/functions/*"
   to = "/.netlify/functions/:splat"
   status = 200
   force = true

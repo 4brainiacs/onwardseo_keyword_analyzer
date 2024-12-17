@@ -17,13 +17,16 @@ export class BaseError extends Error {
 
   constructor(message: string, options: ErrorOptions = {}) {
     super(message);
-    this.name = 'BaseError';
+    this.name = this.constructor.name;
     this.status = options.status ?? 500;
     this.details = options.details;
     this.retryable = options.retryable ?? false;
     this.retryAfter = options.retryAfter ?? 5000;
     this.requestId = options.requestId;
     this.context = options.context;
+
+    // Ensure proper prototype chain
+    Object.setPrototypeOf(this, new.target.prototype);
     Error.captureStackTrace(this, this.constructor);
   }
 

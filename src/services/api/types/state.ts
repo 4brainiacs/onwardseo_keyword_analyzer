@@ -1,5 +1,3 @@
-import type { AnalysisError } from '../../errors';
-
 export enum LoadingState {
   IDLE = 'idle',
   LOADING = 'loading',
@@ -11,7 +9,6 @@ export enum LoadingState {
 export interface ApiState<T> {
   status: LoadingState;
   data: T | null;
-  error: AnalysisError | null;
+  error: Error | null;
   retryCount: number;
-  lastAttempt?: Date;
 }

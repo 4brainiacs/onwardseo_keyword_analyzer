@@ -9,7 +9,7 @@ import { Footer } from './components/Layout/Footer';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { useAnalysis } from './hooks';
 import { logger } from './utils/logger';
-import { AnalysisError } from './services/errors';
+import { AnalysisError } from './services/errors/AnalysisError';
 
 export default function App() {
   const [isInputEnabled, setIsInputEnabled] = useState(true);
@@ -26,15 +26,7 @@ export default function App() {
       logger.info('Analysis completed successfully');
     },
     onError: (error: AnalysisError) => {
-      logger.error('Analysis failed:', {
-        error: {
-          message: error.message,
-          status: error.status,
-          details: error.details,
-          retryable: error.retryable
-        },
-        context: 'App component error handler'
-      });
+      logger.error('Analysis failed:', { error: error.toJSON() });
     }
   });
 
@@ -44,45 +36,47 @@ export default function App() {
   };
 
   return (
-    <ErrorBoundary>
-      <div className="min-h-screen bg-gray-100 flex flex-col">
-        <Header />
-        
-        <main className="flex-grow container mx-auto px-4 py-8">
-          <div className="space-y-8">
-            <UrlInput 
-              onAnalyze={analyze}
-              isLoading={isLoading}
-              isEnabled={isInputEnabled}
-              onNewAnalysis={handleNewAnalysis}
-            />
-            
-            {error && (
-              <ErrorDisplay 
-                error={error}
-                onRetry={error.retryable ? 
-                  () => analyze(error.requestId || '') : undefined}
+    <div className="min-h-screen bg-gray-100">
+      <ErrorBoundary maxRetries={3}>
+        <div className="flex flex-col min-h-screen">
+          <Header />
+          
+          <main className="flex-grow container mx-auto px-4 py-8">
+            <div className="space-y-8">
+              <UrlInput 
+                onAnalyze={analyze}
+                isLoading={isLoading}
+                isEnabled={isInputEnabled}
+                onNewAnalysis={handleNewAnalysis}
               />
-            )}
-            
-            {isLoading && (
-              <div className="flex justify-center py-12">
-                <LoadingSpinner />
-              </div>
-            )}
-            
-            {result && (
-              <AnalysisResults result={result} />
-            )}
-            
-            {!result && !error && !isLoading && (
-              <CalculationExamples />
-            )}
-          </div>
-        </main>
+              
+              {error && (
+                <ErrorDisplay 
+                  error={error}
+                  onRetry={error.retryable ? 
+                    () => analyze(error.requestId || '') : undefined}
+                />
+              )}
+              
+              {isLoading && (
+                <div className="flex justify-center py-12">
+                  <LoadingSpinner />
+                </div>
+              )}
+              
+              {result && (
+                <AnalysisResults result={result} />
+              )}
+              
+              {!result && !error && !isLoading && (
+                <CalculationExamples />
+              )}
+            </div>
+          </main>
 
-        <Footer />
-      </div>
-    </ErrorBoundary>
+          <Footer />
+        </div>
+      </ErrorBoundary>
+    </div>
   );
 }

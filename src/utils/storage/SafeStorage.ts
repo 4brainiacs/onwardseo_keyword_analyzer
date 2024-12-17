@@ -1,71 +1,110 @@
 import { logger } from '../logger';
 
-export class SafeStorage {
-  private isAvailable: boolean;
+interface StorageOptions {
+  fallbackToMemory?: boolean;
+  prefix?: string;
+}
 
-  constructor() {
-    this.isAvailable = this.checkStorageAvailability();
+export class SafeStorage {
+  private memoryStorage: Map<string, string>;
+  private prefix: string;
+  private isStorageAvailable: boolean;
+
+  constructor(options: StorageOptions = {}) {
+    this.prefix = options.prefix || 'app_';
+    this.memoryStorage = new Map();
+    this.isStorageAvailable = this.checkStorageAvailability();
+
+    if (!this.isStorageAvailable && options.fallbackToMemory) {
+      logger.warn('LocalStorage not available, using memory storage fallback');
+    }
   }
 
   private checkStorageAvailability(): boolean {
     try {
       if (typeof window === 'undefined') return false;
       
-      // Test storage access
-      const storage = window.localStorage;
-      const testKey = '__storage_test__';
-      storage.setItem(testKey, testKey);
-      storage.removeItem(testKey);
+      const testKey = `${this.prefix}_test`;
+      window.localStorage.setItem(testKey, 'test');
+      window.localStorage.removeItem(testKey);
       return true;
     } catch {
       return false;
     }
   }
 
-  getItem(key: string): string | null {
-    if (!this.isAvailable) {
-      logger.warn('Storage is not accessible');
-      return null;
-    }
-
+  getItem<T>(key: string): T | null {
     try {
-      return localStorage.getItem(key);
+      const prefixedKey = this.getPrefixedKey(key);
+      
+      if (this.isStorageAvailable) {
+        const item = localStorage.getItem(prefixedKey);
+        return item ? JSON.parse(item) : null;
+      }
+      
+      const item = this.memoryStorage.get(prefixedKey);
+      return item ? JSON.parse(item) : null;
     } catch (error) {
-      logger.error('Failed to read from storage:', error);
+      logger.error('Storage get error:', { key, error });
       return null;
     }
   }
 
-  setItem(key: string, value: string): void {
-    if (!this.isAvailable) {
-      logger.warn('Storage is not accessible');
-      return;
-    }
-
+  setItem<T>(key: string, value: T): void {
     try {
-      localStorage.setItem(key, value);
+      const prefixedKey = this.getPrefixedKey(key);
+      const serializedValue = JSON.stringify(value);
+
+      if (this.isStorageAvailable) {
+        localStorage.setItem(prefixedKey, serializedValue);
+      } else {
+        this.memoryStorage.set(prefixedKey, serializedValue);
+      }
     } catch (error) {
-      logger.error('Failed to write to storage:', error);
+      logger.error('Storage set error:', { key, error });
+      // Fallback to memory storage on error
+      this.memoryStorage.set(this.getPrefixedKey(key), JSON.stringify(value));
     }
   }
 
   removeItem(key: string): void {
-    if (!this.isAvailable) return;
-
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      logger.error('Failed to remove from storage:', error);
+    const prefixedKey = this.getPrefixedKey(key);
+    
+    if (this.isStorageAvailable) {
+      try {
+        localStorage.removeItem(prefixedKey);
+      } catch (error) {
+        logger.error('Storage remove error:', { key, error });
+      }
     }
+    
+    this.memoryStorage.delete(prefixedKey);
   }
 
   clear(): void {
-    if (!this.isAvailable) return;
-
-    try {
-      localStorage.clear();
-    } catch (error) {
-      logger.error('Failed to clear storage:', error);
+    if (this.isStorageAvailable) {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key?.startsWith(this.prefix)) {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (error) {
+        logger.error('Storage clear error:', error);
+      }
     }
+    
+    this.memoryStorage.clear();
+  }
+
+  private getPrefixedKey(key: string): string {
+    return `${this.prefix}${key}`;
   }
 }
+
+// Create singleton instance with default options
+export const storage = new SafeStorage({
+  fallbackToMemory: true,
+  prefix: 'seo_analyzer_'
+});

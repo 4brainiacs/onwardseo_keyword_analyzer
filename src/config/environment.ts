@@ -2,7 +2,8 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   api: z.object({
-    baseUrl: z.string().min(1)
+    baseUrl: z.string().min(1),
+    timeout: z.number().min(1000).default(30000)
   }),
   app: z.object({
     env: z.enum(['development', 'production', 'test']).default('development'),
@@ -19,10 +20,20 @@ const envSchema = z.object({
 type Environment = z.infer<typeof envSchema>;
 
 function getApiUrl(): string {
+  // First check runtime config
   if (typeof window !== 'undefined' && window.__RUNTIME_CONFIG__?.VITE_API_URL) {
     return window.__RUNTIME_CONFIG__.VITE_API_URL;
   }
-  return import.meta.env.VITE_API_URL || '/api';
+
+  // Then check environment variables
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+
+  // Finally use default based on environment
+  return import.meta.env.DEV 
+    ? 'http://localhost:8888/.netlify/functions'
+    : '/.netlify/functions';
 }
 
 function validateEnvironment(): Environment {
@@ -30,7 +41,8 @@ function validateEnvironment(): Environment {
   
   const config = {
     api: {
-      baseUrl: getApiUrl()
+      baseUrl: getApiUrl(),
+      timeout: 30000
     },
     app: {
       env: mode as Environment['app']['env'],
@@ -48,5 +60,4 @@ function validateEnvironment(): Environment {
 }
 
 export const env = validateEnvironment();
-
 export type { Environment };

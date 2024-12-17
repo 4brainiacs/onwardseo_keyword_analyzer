@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '../services/api';
-import { AnalysisError } from '../services/errors';
+import { apiClient } from '../services/api/ApiClient';
+import { AnalysisError } from '../services/errors/AnalysisError';
 import { logger } from '../utils/logger';
 import type { AnalysisResult } from '../types';
 
@@ -10,40 +10,48 @@ interface UseAnalysisOptions {
 }
 
 export function useAnalysis(options: UseAnalysisOptions = {}) {
-  const [state, setState] = useState<{
-    isLoading: boolean;
-    error: AnalysisError | null;
-    result: AnalysisResult | null;
-  }>({
+  const [state, setState] = useState({
     isLoading: false,
-    error: null,
-    result: null
+    error: null as AnalysisError | null,
+    result: null as AnalysisResult | null
   });
 
   const analyze = useCallback(async (url: string) => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
+
     try {
+      logger.info('Starting analysis:', { url });
       const result = await apiClient.analyze(url);
-      setState({ isLoading: false, error: null, result });
+      
+      setState({
+        isLoading: false,
+        error: null,
+        result
+      });
+      
       options.onSuccess?.(result);
     } catch (error) {
-      const analysisError = error instanceof AnalysisError ? 
-        error : 
-        new AnalysisError(
-          'Analysis failed',
-          500,
-          error instanceof Error ? error.message : 'Unknown error',
-          true
-        );
+      const analysisError = error instanceof AnalysisError 
+        ? error 
+        : AnalysisError.fromError(error);
       
-      setState({ isLoading: false, error: analysisError, result: null });
+      setState({
+        isLoading: false,
+        error: analysisError,
+        result: null
+      });
+      
       options.onError?.(analysisError);
-      logger.error('Analysis failed', error);
+      logger.error('Analysis failed:', { error: analysisError });
     }
   }, [options]);
 
   const reset = useCallback(() => {
-    setState({ isLoading: false, error: null, result: null });
+    setState({
+      isLoading: false,
+      error: null,
+      result: null
+    });
   }, []);
 
   return {

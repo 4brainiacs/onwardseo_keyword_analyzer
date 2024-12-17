@@ -1,8 +1,9 @@
 import { logger } from '../../../utils/logger';
+import type { ErrorCode } from '../types/ErrorTypes';
 
 export interface ErrorMetadata {
+  code: ErrorCode;
   status?: number;
-  code?: string;
   details?: string;
   retryable?: boolean;
   retryAfter?: number;
@@ -10,20 +11,20 @@ export interface ErrorMetadata {
   context?: Record<string, unknown>;
 }
 
-export abstract class BaseError extends Error {
+export class BaseError extends Error {
+  readonly code: ErrorCode;
   readonly status: number;
-  readonly code: string;
   readonly details?: string;
   readonly retryable: boolean;
   readonly retryAfter: number;
   readonly requestId?: string;
   readonly context?: Record<string, unknown>;
 
-  constructor(message: string, metadata: ErrorMetadata = {}) {
+  constructor(message: string, metadata: ErrorMetadata) {
     super(message);
     this.name = this.constructor.name;
+    this.code = metadata.code;
     this.status = metadata.status ?? 500;
-    this.code = metadata.code ?? 'UNKNOWN_ERROR';
     this.details = metadata.details;
     this.retryable = metadata.retryable ?? false;
     this.retryAfter = metadata.retryAfter ?? 5000;
@@ -36,32 +37,21 @@ export abstract class BaseError extends Error {
 
   private logError(): void {
     logger.error(this.message, {
-      error: {
-        name: this.name,
-        message: this.message,
-        status: this.status,
-        code: this.code,
-        details: this.details,
-        retryable: this.retryable,
-        retryAfter: this.retryAfter,
-        requestId: this.requestId,
-        context: this.context,
-        stack: this.stack
-      }
+      error: this.toJSON(),
+      context: this.context
     });
   }
 
   toJSON(): Record<string, unknown> {
     return {
       name: this.name,
+      code: this.code,
       message: this.message,
       status: this.status,
-      code: this.code,
       details: this.details,
       retryable: this.retryable,
       retryAfter: this.retryAfter,
       requestId: this.requestId,
-      context: this.context,
       stack: this.stack
     };
   }

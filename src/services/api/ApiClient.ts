@@ -1,63 +1,129 @@
-import { StatusCodes } from 'http-status-codes';
-import { AnalysisError } from '../errors';
+import { AnalysisError } from '../errors/AnalysisError';
 import { logger } from '../../utils/logger';
-import { ResponseValidator } from './validators/ResponseValidator';
-import { DEFAULT_API_CONFIG } from './config/defaults';
-import type { ApiClientConfig, RequestConfig } from './types/requests';
+import { API_CONFIG } from './config';
+import type { AnalysisResult } from '../../types';
 
-export class ApiClient {
-  private config: ApiClientConfig;
-  private validator: ResponseValidator;
+class ApiClient {
+  private readonly baseUrl: string;
+  private readonly timeout: number;
 
-  constructor(config: Partial<ApiClientConfig> = {}) {
-    this.config = {
-      ...DEFAULT_API_CONFIG,
-      ...config
-    };
-    this.validator = new ResponseValidator();
+  constructor() {
+    this.baseUrl = API_CONFIG.baseUrl;
+    this.timeout = API_CONFIG.timeout;
   }
 
-  async request<T>(endpoint: string, config: RequestConfig = {}): Promise<T> {
-    const url = `${this.config.baseUrl}${endpoint}`;
-    const controller = new AbortController();
-    const timeout = setTimeout(
-      () => controller.abort('Request timeout'),
-      config.timeout ?? this.config.timeout
-    );
-
+  async analyze(url: string): Promise<AnalysisResult> {
     try {
-      logger.info('Making API request', { url, method: config.method });
+      logger.info('Starting URL analysis', { url });
 
-      const response = await fetch(url, {
-        ...config,
-        signal: controller.signal,
-        headers: {
-          ...this.config.headers,
-          ...config.headers
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+      try {
+        const response = await fetch(`${this.baseUrl}/analyze`, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: API_CONFIG.headers,
+          body: JSON.stringify({ url }),
+          credentials: 'same-origin'
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw await this.createErrorFromResponse(response);
         }
-      });
 
-      clearTimeout(timeout);
+        const contentType = response.headers.get('content-type');
+        if (!contentType?.includes('application/json')) {
+          throw new AnalysisError({
+            message: 'Invalid content type',
+            status: 415,
+            details: `Expected JSON but received: ${contentType}`,
+            retryable: false
+          });
+        }
 
-      const apiResponse = await this.validator.validateResponse<T>(response);
-      return this.validator.validateApiResponse(apiResponse);
+        const text = await response.text();
+        if (!text) {
+          throw new AnalysisError({
+            message: 'Empty response',
+            status: 500,
+            details: 'Server returned empty response',
+            retryable: true
+          });
+        }
+
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new AnalysisError({
+            message: 'Invalid JSON response',
+            status: 500,
+            details: 'Server returned invalid JSON',
+            retryable: true
+          });
+        }
+
+        if (!data.success || !data.data) {
+          throw new AnalysisError({
+            message: data.error || 'Request failed',
+            status: response.status,
+            details: data.details || 'Server returned unsuccessful response',
+            retryable: data.retryable,
+            retryAfter: data.retryAfter
+          });
+        }
+
+        return data.data;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (error) {
-      clearTimeout(timeout);
+      logger.error('API request failed:', error);
 
       if (error instanceof AnalysisError) {
         throw error;
       }
 
       if (error.name === 'AbortError') {
-        throw new AnalysisError(
-          'Request timeout',
-          StatusCodes.REQUEST_TIMEOUT,
-          'The request took too long to complete',
-          true
-        );
+        throw new AnalysisError({
+          message: 'Request timeout',
+          status: 408,
+          details: 'The request took too long to complete',
+          retryable: true
+        });
       }
 
-      throw AnalysisError.fromError(error);
+      throw new AnalysisError({
+        message: 'Request failed',
+        status: 500,
+        details: error instanceof Error ? error.message : 'An unexpected error occurred',
+        retryable: true
+      });
+    }
+  }
+
+  private async createErrorFromResponse(response: Response): Promise<AnalysisError> {
+    try {
+      const text = await response.text();
+      const data = text ? JSON.parse(text) : null;
+      
+      return new AnalysisError({
+        message: data?.error || `HTTP ${response.status}`,
+        status: response.status,
+        details: data?.details || response.statusText,
+        retryable: response.status >= 500,
+        retryAfter: data?.retryAfter
+      });
+    } catch {
+      return new AnalysisError({
+        message: `HTTP ${response.status}`,
+        status: response.status,
+        details: response.statusText,
+        retryable: response.status >= 500
+      });
     }
   }
 }

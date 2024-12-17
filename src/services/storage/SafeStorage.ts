@@ -1,76 +1,43 @@
 import { logger } from '../../utils/logger';
 
 export class SafeStorage {
-  private static instance: SafeStorage;
-  private isAvailable: boolean;
+  private memoryStorage = new Map<string, string>();
 
-  private constructor() {
-    this.isAvailable = this.checkStorageAvailability();
-  }
+  constructor(private prefix: string = 'app_') {}
 
-  static getInstance(): SafeStorage {
-    if (!SafeStorage.instance) {
-      SafeStorage.instance = new SafeStorage();
-    }
-    return SafeStorage.instance;
-  }
-
-  private checkStorageAvailability(): boolean {
-    if (typeof window === 'undefined') return false;
-
+  get<T>(key: string): T | null {
     try {
-      const storage = window.localStorage;
-      const testKey = '__storage_test__';
-      storage.setItem(testKey, testKey);
-      storage.removeItem(testKey);
-      return true;
-    } catch {
-      logger.warn('Local storage is not available');
-      return false;
-    }
-  }
-
-  getItem<T>(key: string, defaultValue: T): T {
-    if (!this.isAvailable) return defaultValue;
-
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : defaultValue;
+      const prefixedKey = this.getPrefixedKey(key);
+      const value = this.memoryStorage.get(prefixedKey);
+      return value ? JSON.parse(value) : null;
     } catch (error) {
-      logger.error('Failed to read from storage:', error);
-      return defaultValue;
+      logger.error('Storage get error:', { key, error });
+      return null;
     }
   }
 
-  setItem(key: string, value: unknown): void {
-    if (!this.isAvailable) return;
-
+  set<T>(key: string, value: T): void {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      const prefixedKey = this.getPrefixedKey(key);
+      const serializedValue = JSON.stringify(value);
+      this.memoryStorage.set(prefixedKey, serializedValue);
     } catch (error) {
-      logger.error('Failed to write to storage:', error);
+      logger.error('Storage set error:', { key, error });
     }
   }
 
-  removeItem(key: string): void {
-    if (!this.isAvailable) return;
-
-    try {
-      localStorage.removeItem(key);
-    } catch (error) {
-      logger.error('Failed to remove from storage:', error);
-    }
+  remove(key: string): void {
+    const prefixedKey = this.getPrefixedKey(key);
+    this.memoryStorage.delete(prefixedKey);
   }
 
   clear(): void {
-    if (!this.isAvailable) return;
+    this.memoryStorage.clear();
+  }
 
-    try {
-      localStorage.clear();
-    } catch (error) {
-      logger.error('Failed to clear storage:', error);
-    }
+  private getPrefixedKey(key: string): string {
+    return `${this.prefix}${key}`;
   }
 }
 
-export const storage = SafeStorage.getInstance();
+export const storage = new SafeStorage('seo_analyzer_');

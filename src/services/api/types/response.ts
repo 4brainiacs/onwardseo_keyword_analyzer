@@ -1,3 +1,4 @@
+```typescript
 export interface ApiSuccessResponse<T> {
   success: true;
   data: T;
@@ -9,7 +10,7 @@ export interface ApiErrorResponse {
   success: false;
   error: string;
   details?: string;
-  status: number;
+  status?: number;
   retryable?: boolean;
   retryAfter?: number;
   code?: string;
@@ -18,3 +19,4 @@ export interface ApiErrorResponse {
 }
 
 export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
+```

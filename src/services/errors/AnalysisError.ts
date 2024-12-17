@@ -1,15 +1,30 @@
+interface ErrorOptions {
+  message: string;
+  status?: number;
+  details?: string;
+  retryable?: boolean;
+  retryAfter?: number;
+  requestId?: string;
+}
+
 export class AnalysisError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly details: string,
-    public readonly retryable: boolean,
-    public readonly retryAfter: number = 5000,
-    public readonly requestId?: string
-  ) {
-    super(message);
+  readonly status: number;
+  readonly details?: string;
+  readonly retryable: boolean;
+  readonly retryAfter: number;
+  readonly requestId?: string;
+
+  constructor(options: ErrorOptions) {
+    super(options.message);
     this.name = 'AnalysisError';
-    Error.captureStackTrace(this, this.constructor);
+    this.status = options.status ?? 500;
+    this.details = options.details;
+    this.retryable = options.retryable ?? false;
+    this.retryAfter = options.retryAfter ?? 5000;
+    this.requestId = options.requestId;
+
+    // Ensure proper prototype chain
+    Object.setPrototypeOf(this, AnalysisError.prototype);
   }
 
   toJSON() {
@@ -22,5 +37,17 @@ export class AnalysisError extends Error {
       retryAfter: this.retryAfter,
       requestId: this.requestId
     };
+  }
+
+  static fromError(error: unknown): AnalysisError {
+    if (error instanceof AnalysisError) {
+      return error;
+    }
+
+    return new AnalysisError({
+      message: error instanceof Error ? error.message : 'An unexpected error occurred',
+      status: 500,
+      retryable: true
+    });
   }
 }

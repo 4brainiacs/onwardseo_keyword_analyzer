@@ -4,6 +4,18 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5173,
+    host: true,
+    strictPort: true,
+    proxy: {
+      '/.netlify/functions': {
+        target: 'http://localhost:8888',
+        changeOrigin: true,
+        secure: false
+      }
+    }
+  },
   build: {
     outDir: 'dist',
     sourcemap: true,
@@ -13,19 +25,6 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           utils: ['lucide-react', 'html-entities']
         }
-      }
-    }
-  },
-  server: {
-    port: 5173,
-    host: true,
-    strictPort: true,
-    proxy: {
-      '/.netlify/functions': {
-        target: 'http://localhost:8888',
-        changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/\.netlify\/functions/, '')
       }
     }
   },

@@ -1,21 +1,27 @@
-import { AnalysisError } from '../errors';
+import { AnalysisError } from '../errors/AnalysisError';
 import { logger } from '../../utils/logger';
 import { API_CONFIG } from '../../config/api';
 import type { AnalysisResult } from '../../types';
 
-class ApiClient {
-  private baseUrl: string;
+export class ApiService {
+  private readonly baseUrl: string;
+  private readonly timeout: number;
 
   constructor() {
     this.baseUrl = API_CONFIG.baseUrl;
+    this.timeout = API_CONFIG.timeout;
   }
 
   async analyze(url: string): Promise<AnalysisResult> {
     try {
       logger.info('Starting analysis', { url });
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
       const response = await fetch(`${this.baseUrl}/analyze`, {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
@@ -23,31 +29,8 @@ class ApiClient {
         body: JSON.stringify({ url })
       });
 
-      // Handle non-200 responses first
-      if (!response.ok) {
-        const errorText = await response.text();
-        let errorMessage = `HTTP Error ${response.status}`;
-        let errorDetails = response.statusText;
+      clearTimeout(timeoutId);
 
-        try {
-          const errorData = JSON.parse(errorText);
-          if (errorData.error) {
-            errorMessage = errorData.error;
-            errorDetails = errorData.details || errorDetails;
-          }
-        } catch {
-          // Use default error message if JSON parsing fails
-        }
-
-        throw new AnalysisError(
-          errorMessage,
-          response.status,
-          errorDetails,
-          response.status >= 500
-        );
-      }
-
-      // Validate content type
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/json')) {
         throw new AnalysisError(
@@ -58,14 +41,13 @@ class ApiClient {
         );
       }
 
-      // Parse JSON response
       const text = await response.text();
-      let data;
       
+      let data;
       try {
         data = JSON.parse(text);
       } catch (error) {
-        logger.error('JSON parse error:', { error, responseText: text });
+        logger.error('Failed to parse JSON response:', { error, text: text.slice(0, 200) });
         throw new AnalysisError(
           'Invalid JSON response',
           500,
@@ -74,36 +56,32 @@ class ApiClient {
         );
       }
 
-      if (!data.success) {
+      if (!response.ok || !data.success) {
         throw new AnalysisError(
           data.error || 'Request failed',
           response.status,
-          data.details || 'Server returned unsuccessful response',
-          data.retryable,
+          data.details || `Server returned status ${response.status}`,
+          response.status >= 500,
           data.retryAfter
         );
       }
 
       return data.data;
-
     } catch (error) {
-      logger.error('API request failed:', error);
-      
       if (error instanceof AnalysisError) {
         throw error;
       }
 
-      if (error instanceof Error && error.name === 'TypeError') {
-        if (error.message.includes('Failed to fetch')) {
-          throw new AnalysisError(
-            'Network error',
-            503,
-            'Unable to connect to the analysis service. Please check your connection.',
-            true
-          );
-        }
+      if (error.name === 'AbortError') {
+        throw new AnalysisError(
+          'Request timeout',
+          408,
+          'The request took too long to complete',
+          true
+        );
       }
 
+      logger.error('API request failed:', error);
       throw new AnalysisError(
         'Request failed',
         500,
@@ -114,4 +92,4 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient();
+export const apiService = new ApiService();
