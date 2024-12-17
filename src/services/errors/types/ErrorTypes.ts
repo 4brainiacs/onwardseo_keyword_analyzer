@@ -6,7 +6,13 @@ export enum ErrorCode {
   SERVER_ERROR = 'SERVER_ERROR',
   ANALYSIS_ERROR = 'ANALYSIS_ERROR',
   SCRAPING_ERROR = 'SCRAPING_ERROR',
-  STORAGE_ERROR = 'STORAGE_ERROR'
+  STORAGE_ERROR = 'STORAGE_ERROR',
+  REQUEST_TIMEOUT = 'REQUEST_TIMEOUT',
+  INVALID_INPUT = 'INVALID_INPUT',
+  MISSING_FIELD = 'MISSING_FIELD',
+  TYPE_ERROR = 'TYPE_ERROR',
+  CONSTRAINT_ERROR = 'CONSTRAINT_ERROR',
+  HTML_RESPONSE = 'HTML_RESPONSE'
 }
 
 export interface ErrorMetadata {
@@ -24,5 +30,3 @@ export interface ErrorResponse {
   details?: string;
   status?: number;
 }
-
-export type { ErrorMetadata as default };

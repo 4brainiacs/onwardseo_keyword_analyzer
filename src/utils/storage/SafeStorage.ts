@@ -1,3 +1,5 @@
+import { logger } from '../logger';
+
 export interface StorageOptions {
   fallbackToMemory?: boolean;
   prefix?: string;
@@ -14,7 +16,18 @@ export class SafeStorage {
     this.isStorageAvailable = this.checkStorageAvailability();
   }
 
+  private checkStorageAvailability(): boolean {
+    try {
+      if (typeof window === 'undefined') return false;
+      
+      const testKey = `${this.prefix}_test`;
+      window.localStorage.setItem(testKey, 'test');
+      window.localStorage.removeItem(testKey);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   // ... rest of the implementation
 }
-
-export type { StorageOptions };

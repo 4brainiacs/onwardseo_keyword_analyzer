@@ -1,6 +1,6 @@
 import type { AnalysisResult } from '../../../types/analysis';
 
-export interface ApiResponse<T = unknown> {
+export interface ApiResponse<T = AnalysisResult> {
   success: boolean;
   data?: T;
   error?: string;
@@ -38,4 +38,5 @@ export enum LoadingState {
   RETRYING = 'retrying'
 }
 
-export type AnalysisApiResponse = ApiResponse<AnalysisResult>;
+export type { ValidationResult } from './validation';
+export type { ErrorResponse } from './errors';

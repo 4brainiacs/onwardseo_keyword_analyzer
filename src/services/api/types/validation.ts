@@ -8,7 +8,6 @@ export interface ValidationContext {
   url?: string;
   method?: string;
   headers?: Record<string, string>;
-  metadata?: Record<string, unknown>;
 }
 
 export interface ErrorMetadata {
@@ -20,7 +19,3 @@ export interface ErrorMetadata {
   requestId?: string;
   context?: Record<string, unknown>;
 }
-
-// Export types
-export type { ValidationResult as default };
-export type { ValidationContext, ErrorMetadata };

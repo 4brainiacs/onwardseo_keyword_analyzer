@@ -1,4 +1,5 @@
-```typescript
+import type { AnalysisResult } from '../../../types/analysis';
+
 export interface ApiSuccessResponse<T> {
   success: true;
   data: T;
@@ -18,5 +19,4 @@ export interface ApiErrorResponse {
   requestId?: string;
 }
 
-export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
-```
+export type ApiResponse<T = AnalysisResult> = ApiSuccessResponse<T> | ApiErrorResponse;
