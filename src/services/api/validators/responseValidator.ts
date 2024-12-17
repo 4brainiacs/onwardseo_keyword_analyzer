@@ -1,152 +1,89 @@
-```typescript
-import { AnalysisError } from '../../errors';
+import { AnalysisError } from '../../errors/AnalysisError';
 import { logger } from '../../../utils/logger';
-import type { AnalysisResult } from '../../../types';
+import type { ApiResponse } from '../types';
 
-export function validateResponse(data: unknown): AnalysisResult {
+export async function validateResponse<T>(response: Response): Promise<T> {
   try {
-    if (!data || typeof data !== 'object') {
-      throw new AnalysisError(
-        'Invalid response format',
-        500,
-        'Server returned unexpected data format',
-        true
-      );
+    // Validate content type
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
+      throw new AnalysisError({
+        message: 'Invalid content type',
+        status: 415,
+        details: `Expected JSON but received: ${contentType}`,
+        retryable: false
+      });
     }
 
-    const result = data as Partial<AnalysisResult>;
-
-    // Validate required fields
-    const requiredFields = [
-      'title',
-      'headings',
-      'totalWords',
-      'twoWordPhrases',
-      'threeWordPhrases',
-      'fourWordPhrases',
-      'scrapedContent'
-    ] as const;
-
-    for (const field of requiredFields) {
-      if (!(field in result)) {
-        throw new AnalysisError(
-          'Missing required field',
-          500,
-          `Response is missing required field: ${field}`,
-          true
-        );
-      }
+    // Check response status
+    if (!response.ok) {
+      const error = await parseErrorResponse(response);
+      throw new AnalysisError({
+        message: error.message || 'Request failed',
+        status: response.status,
+        details: error.details || `Server returned status ${response.status}`,
+        retryable: response.status >= 500
+      });
     }
 
-    // Validate data types
-    if (typeof result.title !== 'string' || !result.title.trim()) {
-      throw new AnalysisError(
-        'Invalid title',
-        500,
-        'Title must be a non-empty string',
-        true
-      );
+    // Parse response
+    const text = await response.text();
+    if (!text) {
+      throw new AnalysisError({
+        message: 'Empty response',
+        status: 500,
+        details: 'Server returned empty response',
+        retryable: true
+      });
     }
 
-    if (typeof result.totalWords !== 'number' || result.totalWords < 0) {
-      throw new AnalysisError(
-        'Invalid word count',
-        500,
-        'Total words must be a non-negative number',
-        true
-      );
+    let data: ApiResponse<T>;
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      throw new AnalysisError({
+        message: 'Invalid JSON response',
+        status: 500,
+        details: 'Server returned invalid JSON data',
+        retryable: true
+      });
     }
 
-    if (typeof result.scrapedContent !== 'string') {
-      throw new AnalysisError(
-        'Invalid content',
-        500,
-        'Scraped content must be a string',
-        true
-      );
+    if (!data.success || !data.data) {
+      throw new AnalysisError({
+        message: data.error || 'Invalid response format',
+        status: 500,
+        details: data.details || 'Server returned unsuccessful response',
+        retryable: true
+      });
     }
 
-    // Validate arrays
-    const arrayFields = [
-      'twoWordPhrases',
-      'threeWordPhrases',
-      'fourWordPhrases'
-    ] as const;
-
-    for (const field of arrayFields) {
-      if (!Array.isArray(result[field])) {
-        throw new AnalysisError(
-          'Invalid phrases array',
-          500,
-          `${field} must be an array`,
-          true
-        );
-      }
-
-      for (const phrase of result[field] || []) {
-        validatePhrase(phrase, field);
-      }
-    }
-
-    return result as AnalysisResult;
-
+    return data.data;
   } catch (error) {
     logger.error('Response validation failed:', error);
-    throw error instanceof AnalysisError ? error : new AnalysisError(
-      'Invalid response',
-      500,
-      error instanceof Error ? error.message : 'An unexpected error occurred',
-      true
-    );
+    throw error instanceof AnalysisError ? error : new AnalysisError({
+      message: 'Failed to validate response',
+      status: 500,
+      details: error instanceof Error ? error.message : 'Unknown error occurred',
+      retryable: true
+    });
   }
 }
 
-function validatePhrase(phrase: unknown, field: string): void {
-  if (!phrase || typeof phrase !== 'object') {
-    throw new AnalysisError(
-      'Invalid phrase object',
-      500,
-      `Invalid phrase in ${field}`,
-      true
-    );
-  }
-
-  const p = phrase as any;
-
-  if (typeof p.keyword !== 'string' || !p.keyword.trim()) {
-    throw new AnalysisError(
-      'Invalid phrase keyword',
-      500,
-      `Invalid keyword in ${field}`,
-      true
-    );
-  }
-
-  if (typeof p.count !== 'number' || p.count < 0) {
-    throw new AnalysisError(
-      'Invalid phrase count',
-      500,
-      `Invalid count in ${field}`,
-      true
-    );
-  }
-
-  if (typeof p.density !== 'number' || p.density < 0 || p.density > 1) {
-    throw new AnalysisError(
-      'Invalid phrase density',
-      500,
-      `Invalid density in ${field}`,
-      true
-    );
-  }
-
-  if (typeof p.prominence !== 'number' || p.prominence < 0 || p.prominence > 1) {
-    throw new AnalysisError(
-      'Invalid phrase prominence',
-      500,
-      `Invalid prominence in ${field}`,
-      true
-    );
+async function parseErrorResponse(response: Response): Promise<{
+  message?: string;
+  details?: string;
+}> {
+  try {
+    const data = await response.json();
+    return {
+      message: data.error,
+      details: data.details
+    };
+  } catch {
+    return {
+      message: `HTTP ${response.status}`,
+      details: response.statusText
+    };
   }
 }
-```
