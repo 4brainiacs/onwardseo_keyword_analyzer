@@ -1,22 +1,47 @@
-import { ScrapingError } from '../types';
+import { AnalysisError } from '../../errors';
+import { logger } from '../../../utils/logger';
 
 export class ContentValidator {
-  constructor(private maxContentSize: number) {}
-
-  validateSize(contentLength: number): void {
-    if (contentLength > this.maxContentSize) {
-      throw new ScrapingError(
-        'Response too large',
-        413,
-        false,
-        `Maximum allowed size is ${Math.round(this.maxContentSize / 1024 / 1024)}MB`
+  validateContent(html: string): void {
+    if (!html || !html.trim()) {
+      throw new AnalysisError(
+        'Empty content',
+        400,
+        'No content received from webpage',
+        false
       );
     }
-  }
 
-  validateContent(text: string | null): void {
-    if (!text || !text.trim()) {
-      throw new ScrapingError('Empty response received', 400, false);
+    const cleanHtml = html.toLowerCase().trim();
+    
+    // Validate HTML structure
+    if (!cleanHtml.includes('<!doctype html') && !cleanHtml.includes('<html')) {
+      throw new AnalysisError(
+        'Invalid HTML',
+        400,
+        'Content is not valid HTML',
+        false
+      );
     }
+
+    // Check for error pages
+    if (
+      cleanHtml.includes('404 not found') ||
+      cleanHtml.includes('403 forbidden') ||
+      cleanHtml.includes('500 internal server error')
+    ) {
+      throw new AnalysisError(
+        'Error page detected',
+        400,
+        'URL returns an error page',
+        false
+      );
+    }
+
+    logger.debug('Content validation passed', {
+      length: html.length,
+      hasDoctype: cleanHtml.includes('<!doctype html'),
+      hasHtmlTag: cleanHtml.includes('<html')
+    });
   }
 }
