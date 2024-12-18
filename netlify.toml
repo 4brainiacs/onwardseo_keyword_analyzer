@@ -1,5 +1,5 @@
 [build]
-  command = "npm ci && npm run build"
+  command = "npm ci && ./node_modules/.bin/tsc --noEmit && vite build"
   publish = "dist"
   functions = "netlify/functions"
 
