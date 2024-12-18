@@ -1,5 +1,10 @@
 import { logger } from '../../../utils/logger';
-import type { RetryConfig, RetryContext } from '../types/retry';
+
+interface RetryConfig {
+  maxAttempts: number;
+  baseDelay: number;
+  maxDelay: number;
+}
 
 export class RetryHandler {
   constructor(private config: RetryConfig) {}
@@ -9,39 +14,35 @@ export class RetryHandler {
     context: string,
     attempt: number = 0
   ): Promise<T> {
-    const startTime = Date.now();
-
     try {
       return await operation();
     } catch (error) {
-      const retryContext: RetryContext = {
-        attempt,
-        error,
-        startTime,
-        retryCount: attempt + 1
-      };
+      logger.error(`${context} failed:`, { error, attempt });
 
-      logger.error(`${context} failed:`, { error, context: retryContext });
-
-      if (attempt >= this.config.maxAttempts - 1) {
-        throw error;
+      if (
+        error instanceof Error &&
+        error.name === 'AnalysisError' &&
+        (error as any).retryable &&
+        attempt < this.config.maxAttempts - 1
+      ) {
+        const delay = this.calculateDelay((error as any).retryAfter, attempt);
+        logger.info(`Retrying ${context} after ${delay}ms`, { attempt });
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.execute(operation, context, attempt + 1);
       }
 
-      const delay = this.calculateDelay(attempt);
-      logger.info(`Retrying ${context} after ${delay}ms`, retryContext);
-      
-      await this.sleep(delay);
-      return this.execute(operation, context, attempt + 1);
+      throw error;
     }
   }
 
-  private calculateDelay(attempt: number): number {
-    const baseDelay = this.config.baseDelay * Math.pow(2, attempt);
-    const jitter = Math.random() * 1000;
-    return Math.min(baseDelay + jitter, this.config.maxDelay);
-  }
+  private calculateDelay(retryAfter: number | undefined, attempt: number): number {
+    if (retryAfter) {
+      return Math.min(retryAfter, this.config.maxDelay);
+    }
 
-  private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    const exponentialDelay = this.config.baseDelay * Math.pow(2, attempt);
+    const jitter = Math.random() * 1000;
+    return Math.min(exponentialDelay + jitter, this.config.maxDelay);
   }
 }

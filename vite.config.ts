@@ -4,6 +4,18 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  build: {
+    outDir: 'dist',
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          utils: ['lucide-react']
+        }
+      }
+    }
+  },
   server: {
     port: 5173,
     host: true,
@@ -16,17 +28,10 @@ export default defineConfig({
       }
     }
   },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          utils: ['lucide-react', 'html-entities']
-        }
-      }
-    }
+  preview: {
+    port: 4173,
+    host: true,
+    strictPort: true
   },
   resolve: {
     alias: {
