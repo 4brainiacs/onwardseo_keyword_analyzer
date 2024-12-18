@@ -1,4 +1,6 @@
 ```typescript
+import type { AnalysisResult } from './analysis';
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -36,4 +38,6 @@ export enum LoadingState {
   ERROR = 'error',
   RETRYING = 'retrying'
 }
+
+export type AnalysisApiResponse = ApiResponse<AnalysisResult>;
 ```

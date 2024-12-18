@@ -1,40 +1,30 @@
-export const HTTP_STATUS = {
-  OK: 200,
-  BAD_REQUEST: 400,
-  UNAUTHORIZED: 401,
-  NOT_FOUND: 404,
-  TIMEOUT: 408,
-  TOO_MANY_REQUESTS: 429,
-  INTERNAL_ERROR: 500,
-  BAD_GATEWAY: 502,
-  SERVICE_UNAVAILABLE: 503,
-  GATEWAY_TIMEOUT: 504
-} as const;
+```typescript
+export * from './http';
+export * from './errors';
 
-export const ERROR_MESSAGES = {
-  NETWORK: {
-    TIMEOUT: 'Request timed out',
-    CONNECTION: 'Network connection error',
-    ABORT: 'Request was aborted',
-    TIMEOUT_DETAILS: 'The request took too long to complete'
+export const API_CONSTANTS = {
+  HEADERS: {
+    CONTENT_TYPE: 'content-type',
+    ACCEPT: 'accept',
+    REQUEST_ID: 'x-request-id'
   },
-  VALIDATION: {
-    INVALID_JSON: 'Invalid JSON response',
-    INVALID_CONTENT: 'Invalid content type',
-    EMPTY_RESPONSE: 'Empty response received',
-    MALFORMED_RESPONSE: 'Malformed response received',
-    MISSING_CONTENT_TYPE: 'Missing content type header',
-    INVALID_RESPONSE: 'Invalid response format',
-    HTML_RESPONSE: 'HTML response received instead of JSON'
+  CONTENT_TYPES: {
+    JSON: 'application/json',
+    HTML: 'text/html'
   },
-  SERVER: {
-    INTERNAL_ERROR: 'Internal server error',
-    RATE_LIMIT: 'Rate limit exceeded',
-    MAINTENANCE: 'Server is under maintenance'
+  TIMEOUTS: {
+    DEFAULT: 30000,
+    RETRY: 5000,
+    MAX_RETRY: 30000,
+    RATE_LIMIT: 15000
+  },
+  STATUS_CODES: {
+    OK: 200,
+    BAD_REQUEST: 400,
+    UNAUTHORIZED: 401,
+    NOT_FOUND: 404,
+    RATE_LIMIT: 429,
+    SERVER_ERROR: 500
   }
 } as const;
-
-export const CONTENT_TYPES = {
-  JSON: 'application/json',
-  HTML: 'text/html'
-} as const;
+```
