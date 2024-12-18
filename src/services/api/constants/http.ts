@@ -35,7 +35,20 @@ export const ERROR_MESSAGES = {
   }
 } as const;
 
-export const CONTENT_TYPES = {
-  JSON: 'application/json',
-  HTML: 'text/html'
+export const API_CONSTANTS = {
+  HEADERS: {
+    CONTENT_TYPE: 'content-type',
+    ACCEPT: 'accept',
+    REQUEST_ID: 'x-request-id'
+  },
+  CONTENT_TYPES: {
+    JSON: 'application/json',
+    HTML: 'text/html'
+  },
+  TIMEOUTS: {
+    DEFAULT: 30000,
+    RETRY: 5000,
+    MAX_RETRY: 30000,
+    RATE_LIMIT: 15000
+  }
 } as const;

@@ -1,5 +1,4 @@
-import type { AnalysisResult } from './analysis';
-
+```typescript
 export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
@@ -8,6 +7,7 @@ export interface ApiResponse<T = unknown> {
   retryable?: boolean;
   retryAfter?: number;
   status?: number;
+  code?: string;
 }
 
 export interface ApiConfig {
@@ -17,7 +17,7 @@ export interface ApiConfig {
   headers?: Record<string, string>;
 }
 
-export interface RequestConfig {
+export interface RequestConfig extends RequestInit {
   timeout?: number;
   retries?: number;
   headers?: Record<string, string>;
@@ -36,5 +36,4 @@ export enum LoadingState {
   ERROR = 'error',
   RETRYING = 'retrying'
 }
-
-export type AnalysisApiResponse = ApiResponse<AnalysisResult>;
+```

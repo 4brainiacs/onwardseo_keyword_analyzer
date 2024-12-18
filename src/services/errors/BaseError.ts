@@ -1,5 +1,14 @@
-import { ErrorCode, ErrorMetadata } from './types/ErrorTypes';
-import { logger } from '../../utils/logger';
+import { ErrorCode } from '../types/errors';
+
+export interface ErrorMetadata {
+  code: ErrorCode;
+  status?: number;
+  details?: string;
+  retryable?: boolean;
+  retryAfter?: number;
+  requestId?: string;
+  context?: Record<string, unknown>;
+}
 
 export class BaseError extends Error {
   readonly code: ErrorCode;
@@ -22,14 +31,6 @@ export class BaseError extends Error {
     this.context = metadata.context;
 
     Error.captureStackTrace(this, this.constructor);
-    this.logError();
-  }
-
-  private logError(): void {
-    logger.error(this.message, {
-      error: this.toJSON(),
-      context: this.context
-    });
   }
 
   toJSON(): Record<string, unknown> {
