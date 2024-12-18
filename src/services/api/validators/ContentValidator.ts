@@ -1,43 +1,45 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import type { ValidationResult } from './types';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants';
 
 export class ContentValidator {
-  validateContent(content: string | null): ValidationResult {
-    try {
-      if (!content || !content.trim()) {
-        return {
-          isValid: false,
-          error: 'Empty content',
-          details: 'No content received'
-        };
-      }
-
-      const cleanContent = content.toLowerCase().trim();
-
-      // Check for error pages
-      if (this.isErrorPage(cleanContent)) {
-        return {
-          isValid: false,
-          error: 'Error page detected',
-          details: 'Target URL returned an error page'
-        };
-      }
-
-      logger.debug('Content validation passed', {
-        length: content.length,
-        preview: content.slice(0, 200)
-      });
-
-      return { isValid: true };
-    } catch (error) {
-      logger.error('Content validation failed:', { error });
-      return {
-        isValid: false,
-        error: 'Validation error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      };
+  validateContent(html: string): void {
+    if (!html || !html.trim()) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.VALIDATION.EMPTY_RESPONSE,
+        HTTP_STATUS.BAD_REQUEST,
+        'No content received from webpage',
+        false
+      );
     }
+
+    const cleanHtml = html.toLowerCase().trim();
+    
+    // Validate HTML structure
+    if (!cleanHtml.includes('<!doctype html') && !cleanHtml.includes('<html')) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
+        HTTP_STATUS.BAD_REQUEST,
+        'Content is not valid HTML',
+        false
+      );
+    }
+
+    // Check for error pages
+    if (this.isErrorPage(cleanHtml)) {
+      throw new AnalysisError(
+        ERROR_MESSAGES.VALIDATION.ERROR_PAGE,
+        HTTP_STATUS.BAD_REQUEST,
+        'URL returns an error page',
+        false
+      );
+    }
+
+    logger.debug('Content validation passed', {
+      length: html.length,
+      hasDoctype: cleanHtml.includes('<!doctype html'),
+      hasHtmlTag: cleanHtml.includes('<html')
+    });
   }
 
   private isErrorPage(content: string): boolean {

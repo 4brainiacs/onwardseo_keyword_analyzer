@@ -1,46 +1,44 @@
-import type { ValidationResult } from './types';
+import { AnalysisError } from '../../errors';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants';
+import type { ValidationResult } from '../types';
 
 export class UrlValidator {
   validate(url: string): ValidationResult {
     if (!url?.trim()) {
       return {
         isValid: false,
-        error: 'URL is required'
+        error: ERROR_MESSAGES.VALIDATION.MISSING_URL
       };
     }
 
     try {
       const parsed = new URL(url);
       
-      if (!['http:', 'https:'].includes(parsed.protocol)) {
+      if (!this.isValidProtocol(parsed.protocol)) {
         return {
           isValid: false,
-          error: 'URL must use HTTP or HTTPS protocol'
+          error: ERROR_MESSAGES.VALIDATION.INVALID_PROTOCOL
         };
       }
 
-      // Block localhost and private IPs
-      const hostname = parsed.hostname.toLowerCase();
-      if (this.isPrivateHostname(hostname)) {
+      if (this.isPrivateHostname(parsed.hostname)) {
         return {
           isValid: false,
-          error: 'Local and private URLs are not allowed'
+          error: ERROR_MESSAGES.VALIDATION.PRIVATE_URL
         };
       }
 
-      // Validate hostname format
-      if (!this.isValidHostname(hostname)) {
+      if (!this.isValidHostname(parsed.hostname)) {
         return {
           isValid: false,
-          error: 'Invalid hostname format'
+          error: ERROR_MESSAGES.VALIDATION.INVALID_HOSTNAME
         };
       }
 
-      // Length validation
       if (url.length > 2000) {
         return {
           isValid: false,
-          error: 'URL exceeds maximum length of 2000 characters'
+          error: ERROR_MESSAGES.VALIDATION.URL_TOO_LONG
         };
       }
 
@@ -48,21 +46,27 @@ export class UrlValidator {
     } catch {
       return {
         isValid: false,
-        error: 'Invalid URL format'
+        error: ERROR_MESSAGES.VALIDATION.INVALID_URL
       };
     }
   }
 
+  private isValidProtocol(protocol: string): boolean {
+    return ['http:', 'https:'].includes(protocol);
+  }
+
   private isPrivateHostname(hostname: string): boolean {
-    return (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname.startsWith('192.168.') ||
-      hostname.startsWith('10.') ||
-      hostname.startsWith('172.16.') ||
-      hostname.startsWith('169.254.') ||
-      hostname === '[::1]'
-    );
+    const privatePatterns = [
+      'localhost',
+      '127.0.0.1',
+      '192.168.',
+      '10.',
+      '172.16.',
+      '169.254.',
+      '[::1]'
+    ];
+
+    return privatePatterns.some(pattern => hostname.includes(pattern));
   }
 
   private isValidHostname(hostname: string): boolean {

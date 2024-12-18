@@ -1,11 +1,10 @@
-```typescript
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { HTTP_STATUS, API_CONSTANTS } from '../constants';
+import { HTTP_STATUS, ERROR_MESSAGES } from '../constants';
 import type { ApiResponse } from '../types';
 
 export class ResponseValidator {
-  static async validateResponse<T>(response: Response): Promise<T> {
+  async validateResponse<T>(response: Response): Promise<T> {
     try {
       await this.validateContentType(response);
       const data = await this.parseResponse<T>(response);
@@ -21,12 +20,11 @@ export class ResponseValidator {
     }
   }
 
-  private static async validateContentType(response: Response): Promise<void> {
-    const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
-    
-    if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
+  private async validateContentType(response: Response): Promise<void> {
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
       throw new AnalysisError(
-        'Invalid content type',
+        ERROR_MESSAGES.VALIDATION.INVALID_CONTENT,
         HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE,
         `Expected JSON but received: ${contentType}`,
         false
@@ -34,12 +32,11 @@ export class ResponseValidator {
     }
   }
 
-  private static async parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
+  private async parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
     const text = await response.text();
-    
     if (!text) {
       throw new AnalysisError(
-        'Empty response',
+        ERROR_MESSAGES.VALIDATION.EMPTY_RESPONSE,
         HTTP_STATUS.BAD_GATEWAY,
         'Server returned empty response',
         true
@@ -50,7 +47,7 @@ export class ResponseValidator {
       return JSON.parse(text);
     } catch {
       throw new AnalysisError(
-        'Invalid JSON response',
+        ERROR_MESSAGES.VALIDATION.INVALID_JSON,
         HTTP_STATUS.BAD_GATEWAY,
         'Server returned invalid JSON data',
         true
@@ -58,10 +55,10 @@ export class ResponseValidator {
     }
   }
 
-  private static validateData<T>(data: ApiResponse<T>): T {
+  private validateData<T>(data: ApiResponse<T>): T {
     if (!data.success || !data.data) {
       throw new AnalysisError(
-        data.error || 'Invalid response format',
+        data.error || ERROR_MESSAGES.VALIDATION.INVALID_RESPONSE,
         HTTP_STATUS.BAD_GATEWAY,
         data.details || 'Server returned unsuccessful response',
         true
@@ -71,4 +68,3 @@ export class ResponseValidator {
     return data.data;
   }
 }
-```
