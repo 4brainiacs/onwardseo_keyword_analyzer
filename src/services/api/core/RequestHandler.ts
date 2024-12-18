@@ -1,25 +1,20 @@
-```typescript
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { HTTP_STATUS, API_CONSTANTS } from '../constants';
-import type { RequestConfig } from '../types';
+import type { ApiConfig } from '../types';
 
 export class RequestHandler {
-  async sendRequest(url: string, config: RequestConfig): Promise<Response> {
+  constructor(private config: ApiConfig) {}
+
+  async sendRequest(url: string, options: RequestInit): Promise<Response> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), config.timeout || API_CONSTANTS.TIMEOUTS.DEFAULT);
+    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
 
     try {
-      logger.debug('Making request', { url, method: config.method });
+      logger.debug('Making request', { url, method: options.method });
 
       const response = await fetch(url, {
-        ...config,
-        signal: controller.signal,
-        headers: {
-          [API_CONSTANTS.HEADERS.CONTENT_TYPE]: API_CONSTANTS.CONTENT_TYPES.JSON,
-          [API_CONSTANTS.HEADERS.ACCEPT]: API_CONSTANTS.CONTENT_TYPES.JSON,
-          ...config.headers
-        }
+        ...options,
+        signal: controller.signal
       });
 
       if (!response.ok) {
@@ -40,7 +35,7 @@ export class RequestHandler {
       if (error instanceof TypeError && error.name === 'AbortError') {
         throw new AnalysisError(
           'Request timeout',
-          HTTP_STATUS.REQUEST_TIMEOUT,
+          408,
           'The request took too long to complete',
           true
         );
@@ -48,7 +43,7 @@ export class RequestHandler {
 
       throw new AnalysisError(
         'Network error',
-        HTTP_STATUS.SERVICE_UNAVAILABLE,
+        503,
         error instanceof Error ? error.message : 'Failed to connect to server',
         true
       );
@@ -57,4 +52,3 @@ export class RequestHandler {
     }
   }
 }
-```

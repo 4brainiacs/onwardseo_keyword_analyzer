@@ -1,4 +1,3 @@
-```typescript
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
 import { HTTP_STATUS, API_CONSTANTS } from '../constants';
@@ -84,4 +83,3 @@ export class ApiClient {
     );
   }
 }
-```
