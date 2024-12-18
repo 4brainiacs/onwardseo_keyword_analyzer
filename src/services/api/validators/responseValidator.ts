@@ -1,20 +1,23 @@
-```typescript
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { HTTP_STATUS, API_CONSTANTS } from '../constants';
 import type { ApiResponse } from '../types';
+
+interface ErrorResponse {
+  message?: string;
+  details?: string;
+}
 
 export class ResponseValidator {
   static async validateResponse<T>(response: Response): Promise<T> {
     try {
       await this.validateContentType(response);
-      const data = await this.parseResponse<T>(response);
-      return this.validateData(data);
+      const data = await this.parseAndValidateResponse<T>(response);
+      return data;
     } catch (error) {
       logger.error('Response validation failed:', error);
       throw error instanceof AnalysisError ? error : new AnalysisError(
         'Failed to validate response',
-        HTTP_STATUS.INTERNAL_ERROR,
+        500,
         error instanceof Error ? error.message : 'Unknown error occurred',
         true
       );
@@ -22,47 +25,34 @@ export class ResponseValidator {
   }
 
   private static async validateContentType(response: Response): Promise<void> {
-    const contentType = response.headers.get(API_CONSTANTS.HEADERS.CONTENT_TYPE);
-    
-    if (!contentType?.includes(API_CONSTANTS.CONTENT_TYPES.JSON)) {
+    const contentType = response.headers.get('content-type');
+    if (!contentType?.includes('application/json')) {
       throw new AnalysisError(
         'Invalid content type',
-        HTTP_STATUS.UNSUPPORTED_MEDIA_TYPE,
+        415,
         `Expected JSON but received: ${contentType}`,
         false
       );
     }
   }
 
-  private static async parseResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const text = await response.text();
+  private static async parseAndValidateResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+      const error = await this.parseErrorResponse(response);
+      throw new AnalysisError(
+        error.message || 'Request failed',
+        response.status,
+        error.details || `Server returned status ${response.status}`,
+        response.status >= 500
+      );
+    }
+
+    const data = await response.json() as ApiResponse<T>;
     
-    if (!text) {
-      throw new AnalysisError(
-        'Empty response',
-        HTTP_STATUS.BAD_GATEWAY,
-        'Server returned empty response',
-        true
-      );
-    }
-
-    try {
-      return JSON.parse(text);
-    } catch {
-      throw new AnalysisError(
-        'Invalid JSON response',
-        HTTP_STATUS.BAD_GATEWAY,
-        'Server returned invalid JSON data',
-        true
-      );
-    }
-  }
-
-  private static validateData<T>(data: ApiResponse<T>): T {
     if (!data.success || !data.data) {
       throw new AnalysisError(
         data.error || 'Invalid response format',
-        HTTP_STATUS.BAD_GATEWAY,
+        500,
         data.details || 'Server returned unsuccessful response',
         true
       );
@@ -70,5 +60,19 @@ export class ResponseValidator {
 
     return data.data;
   }
+
+  private static async parseErrorResponse(response: Response): Promise<ErrorResponse> {
+    try {
+      const data = await response.json();
+      return {
+        message: data.error,
+        details: data.details
+      };
+    } catch {
+      return {
+        message: `HTTP ${response.status}`,
+        details: response.statusText
+      };
+    }
+  }
 }
-```
