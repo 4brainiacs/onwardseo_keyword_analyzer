@@ -20,3 +20,11 @@ interface Window {
     NODE_ENV: string;
   };
 }
+
+declare module 'react' {
+  interface JSX {
+    IntrinsicElements: {
+      [elemName: string]: any;
+    };
+  }
+}

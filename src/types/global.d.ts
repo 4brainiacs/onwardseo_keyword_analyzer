@@ -1,4 +1,6 @@
 /// <reference types="vite/client" />
+/// <reference types="@testing-library/jest-dom" />
+/// <reference types="vitest/globals" />
 
 interface Window {
   __RUNTIME_CONFIG__?: {
@@ -14,12 +16,20 @@ interface ImportMetaEnv {
   readonly MODE: 'development' | 'production' | 'test';
   readonly DEV: boolean;
   readonly PROD: boolean;
-  readonly TEST: boolean;
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
 
-declare module 'jsdom';
-declare module 'dompurify';
+declare module 'react' {
+  interface JSX {
+    IntrinsicElements: {
+      [elemName: string]: any;
+    };
+  }
+}
+
+declare module '@testing-library/jest-dom';
+declare module 'vitest/globals';
+declare module 'http-status-codes';

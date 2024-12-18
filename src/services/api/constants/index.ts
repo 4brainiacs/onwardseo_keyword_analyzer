@@ -1,6 +1,6 @@
-```typescript
 export * from './http';
 export * from './errors';
+export * from './validation';
 
 export const API_CONSTANTS = {
   HEADERS: {
@@ -27,4 +27,3 @@ export const API_CONSTANTS = {
     SERVER_ERROR: 500
   }
 } as const;
-```

@@ -7,7 +7,6 @@
   NODE_VERSION = "18"
   NPM_VERSION = "9"
   CI = "true"
-  PYTHON_VERSION = "3.8"
 
 [functions]
   node_bundler = "esbuild"
