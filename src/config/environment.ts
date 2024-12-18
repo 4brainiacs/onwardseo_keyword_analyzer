@@ -2,18 +2,20 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   api: z.object({
-    baseUrl: z.string().min(1),
-    timeout: z.number().min(1000).default(30000)
-  }),
-  app: z.object({
-    env: z.enum(['development', 'production', 'test']).default('development'),
-    isDev: z.boolean(),
-    isProd: z.boolean(),
-    isTest: z.boolean()
+    baseUrl: z.string().min(1).refine(
+      (url) => url.startsWith('/') || url.startsWith('http'),
+      { message: 'API URL must start with / or http' }
+    )
   }),
   scrapingBee: z.object({
     apiKey: z.string().optional(),
     baseUrl: z.string().url()
+  }),
+  app: z.object({
+    env: z.enum(['development', 'production', 'test']),
+    isDev: z.boolean(),
+    isProd: z.boolean(),
+    isTest: z.boolean()
   })
 });
 
@@ -41,8 +43,7 @@ function validateEnvironment(): Environment {
   
   const config = {
     api: {
-      baseUrl: getApiUrl(),
-      timeout: 30000
+      baseUrl: getApiUrl()
     },
     app: {
       env: mode as Environment['app']['env'],

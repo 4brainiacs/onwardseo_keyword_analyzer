@@ -1,9 +1,8 @@
-export * from './client';
-export * from './constants/http';
-export * from './types';
-export * from './validators';
+// Core exports
+export { apiClient } from './client';
+export { API_CONFIG } from './config';
 
-// Re-export specific types
+// Type exports
 export type { 
   ApiResponse,
   ApiConfig,
@@ -11,3 +10,10 @@ export type {
   RetryConfig,
   LoadingState
 } from './types';
+
+// Validator exports
+export { validateResponse } from './validators';
+export type { ValidationResult } from './validators';
+
+// Error handling
+export { handleApiError } from './handlers/errorHandler';

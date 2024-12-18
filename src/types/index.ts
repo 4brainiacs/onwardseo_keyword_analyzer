@@ -1,9 +1,10 @@
+// Re-export all type definitions
 export * from './analysis';
 export * from './api';
 export * from './errors';
 export * from './validation';
 
-// Re-export common types
+// Common type aliases
 export type { 
   AnalysisResult,
   KeywordAnalysis,
