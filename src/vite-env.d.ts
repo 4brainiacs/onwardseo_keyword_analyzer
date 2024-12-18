@@ -1,6 +1,4 @@
 /// <reference types="vite/client" />
-/// <reference types="@testing-library/jest-dom" />
-/// <reference types="vitest/globals" />
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
@@ -19,6 +17,3 @@ interface Window {
     NODE_ENV: string;
   };
 }
-
-declare module '@testing-library/jest-dom';
-declare module 'vitest/globals';

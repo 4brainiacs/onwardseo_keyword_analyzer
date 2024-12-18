@@ -1,4 +1,4 @@
-import { ValidationError } from '../domain/ValidationError';
+import { ValidationError } from '../../errors';
 import { logger } from '../../../utils/logger';
 import { ErrorCode } from '../types';
 
@@ -10,22 +10,22 @@ export class ValidationErrorHandler {
       throw error;
     }
 
-    throw new ValidationError({
-      message: `Invalid ${field}`,
-      code: ErrorCode.VALIDATION_ERROR,
-      details: error instanceof Error ? error.message : 'Invalid input',
-      retryable: false
-    });
+    throw new ValidationError(
+      `Invalid ${field}`,
+      400,
+      error instanceof Error ? error.message : 'Invalid input',
+      false
+    );
   }
 
   static required(field: string): never {
     logger.error('Required field missing:', { field });
     
-    throw new ValidationError({
-      message: `Missing ${field}`,
-      code: ErrorCode.MISSING_FIELD,
-      details: `The field "${field}" is required`,
-      retryable: false
-    });
+    throw new ValidationError(
+      `Missing ${field}`,
+      400,
+      `The field "${field}" is required`,
+      false
+    );
   }
 }

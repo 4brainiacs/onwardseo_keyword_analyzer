@@ -1,10 +1,10 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
 import { HTTP_STATUS, API_CONSTANTS } from '../constants';
-import type { ApiConfig, ApiResponse } from '../types';
+import type { ApiResponse } from '../types';
 
 export class ApiClient {
-  constructor(private config: ApiConfig) {}
+  constructor(private config: { baseUrl: string; timeout: number }) {}
 
   async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
@@ -51,7 +51,7 @@ export class ApiClient {
 
     if (!data.success || !data.data) {
       throw new AnalysisError(
-        data.error || 'Request failed',
+        data.error || 'Invalid response format',
         response.status,
         data.details || 'Server returned unsuccessful response',
         response.status >= 500
