@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "prebuild": "rimraf dist",
+    "prebuild": "rm -rf dist",
     "build": "vite build",
     "preview": "vite preview --host --port 4173",
     "test": "vitest",
@@ -17,12 +17,13 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "lucide-react": "0.294.0",
+    "typescript": "5.3.3",
     "zod": "3.22.4"
   },
   "devDependencies": {
@@ -41,9 +42,7 @@
     "eslint-plugin-react-refresh": "0.4.5",
     "jsdom": "23.0.1",
     "postcss": "8.4.32",
-    "rimraf": "5.0.5",
     "tailwindcss": "3.3.6",
-    "typescript": "5.3.3",
     "vite": "5.0.7",
     "vitest": "1.0.4"
   }
