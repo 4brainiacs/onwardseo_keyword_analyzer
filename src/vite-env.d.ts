@@ -19,3 +19,6 @@ interface Window {
     NODE_ENV: string;
   };
 }
+
+declare module '@testing-library/jest-dom';
+declare module 'vitest/globals';
