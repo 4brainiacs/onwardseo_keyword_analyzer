@@ -13,7 +13,11 @@ export default defineConfig({
           vendor: ['react', 'react-dom'],
           utils: ['lucide-react']
         }
-      }
+      },
+      external: [
+        '@testing-library/jest-dom',
+        'vitest/globals'
+      ]
     }
   },
   server: {

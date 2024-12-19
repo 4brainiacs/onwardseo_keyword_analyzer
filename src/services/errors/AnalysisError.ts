@@ -1,23 +1,28 @@
-import { BaseError } from './BaseError';
-import { ErrorCode } from './types/ErrorTypes';
-
-export class AnalysisError extends BaseError {
+export class AnalysisError extends Error {
   constructor(
     message: string,
-    status: number = 500,
-    details?: string,
-    retryable: boolean = false,
-    retryAfter: number = 5000,
-    requestId?: string
+    public readonly status: number = 500,
+    public readonly details?: string,
+    public readonly retryable: boolean = false,
+    public readonly retryAfter: number = 5000,
+    public readonly requestId?: string
   ) {
-    super(message, {
-      code: ErrorCode.ANALYSIS_ERROR,
-      status,
-      details,
-      retryable,
-      retryAfter,
-      requestId
-    });
+    super(message);
+    this.name = 'AnalysisError';
+    Error.captureStackTrace(this, this.constructor);
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      status: this.status,
+      details: this.details,
+      retryable: this.retryable,
+      retryAfter: this.retryAfter,
+      requestId: this.requestId,
+      stack: this.stack
+    };
   }
 
   static fromError(error: unknown): AnalysisError {

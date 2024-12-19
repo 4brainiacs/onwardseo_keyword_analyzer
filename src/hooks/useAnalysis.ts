@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { apiClient } from '../services/api/ApiClient';
+import { apiClient } from '../services/api/client';
 import { AnalysisError } from '../services/errors/AnalysisError';
 import { logger } from '../utils/logger';
 import type { AnalysisResult } from '../types';
@@ -31,9 +31,7 @@ export function useAnalysis(options: UseAnalysisOptions = {}) {
       
       options.onSuccess?.(result);
     } catch (error) {
-      const analysisError = error instanceof AnalysisError 
-        ? error 
-        : AnalysisError.fromError(error);
+      const analysisError = AnalysisError.fromError(error);
       
       setState({
         isLoading: false,

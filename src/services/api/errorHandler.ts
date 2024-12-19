@@ -1,9 +1,8 @@
-import { AnalysisError } from '../errors';
+import { AnalysisError } from '../errors/AnalysisError';
 import { logger } from '../../utils/logger';
-import { HTTP_STATUS } from './constants';
 
 export function handleApiError(error: unknown): never {
-  logger.error('API Error:', error);
+  logger.error('API Error:', { error });
 
   if (error instanceof AnalysisError) {
     throw error;
@@ -21,7 +20,7 @@ export function handleApiError(error: unknown): never {
   if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
     throw new AnalysisError(
       'Network error',
-      HTTP_STATUS.SERVER_ERROR,
+      503,
       'Unable to connect to the server. Please check your connection.',
       true
     );
@@ -29,7 +28,7 @@ export function handleApiError(error: unknown): never {
 
   throw new AnalysisError(
     'Request failed',
-    HTTP_STATUS.SERVER_ERROR,
+    500,
     error instanceof Error ? error.message : 'An unexpected error occurred',
     true
   );

@@ -4,17 +4,22 @@ export interface LogEntry {
   timestamp: string;
   level: LogLevel;
   message: string;
-  context?: Record<string, unknown>;
+  context?: LogContext;
   requestId?: string;
-  component?: string;
-}
-
-export interface LogOptions {
-  requestId?: string;
-  component?: string;
-  tags?: string[];
 }
 
 export interface LogContext {
   [key: string]: unknown;
+}
+
+export interface ErrorContext extends LogContext {
+  error?: {
+    name: string;
+    message: string;
+    stack?: string;
+    cause?: unknown;
+  };
+  requestId?: string;
+  component?: string;
+  operation?: string;
 }

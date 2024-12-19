@@ -14,7 +14,7 @@
     "preview": "vite preview --host --port 4173",
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --ext ts,tsx --report-unused-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
@@ -30,11 +30,12 @@
   },
   "devDependencies": {
     "@testing-library/jest-dom": "6.1.5",
-    "@testing-library/react": "14.1.2", 
+    "@testing-library/react": "14.1.2",
     "@testing-library/user-event": "14.5.1",
     "@types/node": "20.10.4",
     "@types/react": "18.2.43",
     "@types/react-dom": "18.2.17",
+    "@types/testing-library__jest-dom": "5.14.9",
     "@typescript-eslint/eslint-plugin": "6.14.0",
     "@typescript-eslint/parser": "6.14.0",
     "autoprefixer": "10.4.16",
