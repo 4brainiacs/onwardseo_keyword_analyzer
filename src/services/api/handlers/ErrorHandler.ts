@@ -1,10 +1,10 @@
 import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
-import { API_CONSTANTS } from '../constants';
+import { HTTP_STATUS, API_CONSTANTS } from '../constants/http';
 
 export class ErrorHandler {
-  handleApiError(error: unknown, context?: Record<string, unknown>): never {
-    logger.error('API Error:', { error, context });
+  static handle(error: unknown): never {
+    logger.error('API Error:', { error });
 
     if (error instanceof AnalysisError) {
       throw error;
@@ -12,33 +12,33 @@ export class ErrorHandler {
 
     if (error instanceof TypeError) {
       if (error.message.includes('Failed to fetch')) {
-        throw new AnalysisError({
-          message: API_CONSTANTS.ERROR_MESSAGES.NETWORK.CONNECTION,
-          status: 503,
-          details: 'Unable to connect to the server',
-          retryable: true
-        });
+        throw new AnalysisError(
+          'Network error',
+          HTTP_STATUS.SERVICE_UNAVAILABLE,
+          'Unable to connect to the server',
+          true
+        );
       }
 
       if (error.message.includes('aborted')) {
-        throw new AnalysisError({
-          message: API_CONSTANTS.ERROR_MESSAGES.NETWORK.TIMEOUT,
-          status: 408,
-          details: 'The request took too long to complete',
-          retryable: true
-        });
+        throw new AnalysisError(
+          'Request timeout',
+          HTTP_STATUS.TIMEOUT,
+          'The request took too long to complete',
+          true
+        );
       }
     }
 
-    throw new AnalysisError({
-      message: 'Request failed',
-      status: 500,
-      details: error instanceof Error ? error.message : 'An unexpected error occurred',
-      retryable: true
-    });
+    throw new AnalysisError(
+      'Request failed',
+      HTTP_STATUS.INTERNAL_ERROR,
+      error instanceof Error ? error.message : 'An unexpected error occurred',
+      true
+    );
   }
 
-  async handleErrorResponse(response: Response): Promise<never> {
+  static async handleErrorResponse(response: Response): Promise<never> {
     let errorMessage = `HTTP ${response.status}`;
     let errorDetails = response.statusText;
     let retryable = response.status >= 500;
@@ -59,12 +59,12 @@ export class ErrorHandler {
       logger.error('Failed to parse error response:', error);
     }
 
-    throw new AnalysisError({
-      message: errorMessage,
-      status: response.status,
-      details: errorDetails,
+    throw new AnalysisError(
+      errorMessage,
+      response.status,
+      errorDetails,
       retryable,
       retryAfter
-    });
+    );
   }
 }

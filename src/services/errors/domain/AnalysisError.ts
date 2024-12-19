@@ -1,6 +1,5 @@
 import { BaseError } from '../core/BaseError';
 import { ErrorCode } from '../types/ErrorTypes';
-import type { ErrorMetadata } from '../types/ErrorTypes';
 
 export class AnalysisError extends BaseError {
   constructor(
@@ -21,18 +20,15 @@ export class AnalysisError extends BaseError {
     });
   }
 
-  static fromError(error: unknown, context?: Record<string, unknown>): AnalysisError {
+  static fromError(error: unknown): AnalysisError {
     if (error instanceof AnalysisError) {
       return error;
     }
-
     return new AnalysisError(
       error instanceof Error ? error.message : 'An unexpected error occurred',
       500,
       undefined,
-      true,
-      5000,
-      undefined
+      true
     );
   }
 }

@@ -1,5 +1,13 @@
+```typescript
 import { logger } from '../../utils/logger';
-import { BaseError, ErrorContext } from './types';
+import { BaseError } from './types';
+
+interface ErrorContext {
+  url?: string;
+  requestId?: string;
+  component?: string;
+  additionalInfo?: Record<string, unknown>;
+}
 
 export class ErrorReporter {
   static report(error: Error | BaseError, context?: ErrorContext): void {
@@ -20,7 +28,7 @@ export class ErrorReporter {
 
     logger.error('Application Error:', errorDetails);
 
-    // Log to console in a format that's easy to find in logs
+    // Log to console in a format that's easy to find in Netlify logs
     console.error('=================== ERROR REPORT ===================');
     console.error('Timestamp:', new Date().toISOString());
     console.error('Error:', errorDetails);
@@ -43,3 +51,4 @@ export class ErrorReporter {
     }
   }
 }
+```

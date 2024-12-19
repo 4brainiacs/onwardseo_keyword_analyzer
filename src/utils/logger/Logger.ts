@@ -1,12 +1,17 @@
 import type { LogLevel, LogEntry, LogContext } from './types';
+import { LogFormatter } from './formatters/LogFormatter';
+import { ConsoleTransport } from './transports/ConsoleTransport';
 
 export class Logger {
   private static instance: Logger;
   private logs: LogEntry[] = [];
   private readonly maxLogs = 1000;
   private readonly isDev = import.meta.env.DEV;
+  private readonly consoleTransport: ConsoleTransport;
 
-  private constructor() {}
+  private constructor() {
+    this.consoleTransport = new ConsoleTransport();
+  }
 
   static getInstance(): Logger {
     if (!Logger.instance) {
@@ -48,7 +53,7 @@ export class Logger {
 
   private log(level: LogLevel, message: string, context?: LogContext, requestId?: string): void {
     const timestamp = new Date().toISOString();
-    const sanitizedContext = this.sanitizeContext(context);
+    const sanitizedContext = LogFormatter.sanitizeContext(context);
 
     const entry: LogEntry = {
       timestamp,
@@ -63,58 +68,7 @@ export class Logger {
       this.logs.shift();
     }
 
-    this.writeToConsole(entry);
-  }
-
-  private writeToConsole(entry: LogEntry): void {
-    const prefix = `[${entry.timestamp}] ${entry.level}${entry.requestId ? ` [${entry.requestId}]` : ''}:`;
-    const contextStr = entry.context ? `\n${JSON.stringify(entry.context, null, 2)}` : '';
-    const message = `${prefix} ${entry.message}${contextStr}`;
-
-    switch (entry.level) {
-      case 'ERROR':
-        console.error(message);
-        break;
-      case 'WARN':
-        console.warn(message);
-        break;
-      case 'INFO':
-        console.info(message);
-        break;
-      case 'DEBUG':
-        console.debug(message);
-        break;
-    }
-  }
-
-  private sanitizeContext(context?: LogContext): LogContext | undefined {
-    if (!context) return undefined;
-
-    try {
-      const sanitized = { ...context };
-      const sensitiveKeys = [
-        'password', 'token', 'key', 'secret', 'authorization',
-        'api_key', 'apiKey', 'auth', 'credentials'
-      ];
-      
-      this.recursiveSanitize(sanitized, sensitiveKeys);
-      return sanitized;
-    } catch (error) {
-      console.error('Error sanitizing log context:', error);
-      return { error: 'Error sanitizing log context' };
-    }
-  }
-
-  private recursiveSanitize(obj: any, sensitiveKeys: string[]): void {
-    if (!obj || typeof obj !== 'object') return;
-
-    Object.keys(obj).forEach(key => {
-      if (sensitiveKeys.some(k => key.toLowerCase().includes(k))) {
-        obj[key] = '[REDACTED]';
-      } else if (typeof obj[key] === 'object') {
-        this.recursiveSanitize(obj[key], sensitiveKeys);
-      }
-    });
+    this.consoleTransport.write(entry);
   }
 
   getLogs(options: { 
@@ -146,5 +100,3 @@ export class Logger {
     this.logs = [];
   }
 }
-
-export const logger = Logger.getInstance();

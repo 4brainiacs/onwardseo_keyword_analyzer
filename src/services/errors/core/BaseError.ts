@@ -1,17 +1,7 @@
 import { logger } from '../../../utils/logger';
-import type { ErrorCode } from '../types/ErrorTypes';
+import type { ErrorCode, ErrorMetadata } from '../types/ErrorTypes';
 
-export interface ErrorMetadata {
-  code: ErrorCode;
-  status?: number;
-  details?: string;
-  retryable?: boolean;
-  retryAfter?: number;
-  requestId?: string;
-  context?: Record<string, unknown>;
-}
-
-export class BaseError extends Error {
+export abstract class BaseError extends Error {
   readonly code: ErrorCode;
   readonly status: number;
   readonly details?: string;
