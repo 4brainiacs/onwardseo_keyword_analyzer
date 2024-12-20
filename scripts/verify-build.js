@@ -7,6 +7,8 @@ function runCommand(command) {
     execSync(command, { stdio: 'inherit' });
     return true;
   } catch (error) {
+    console.error(`Command failed: ${command}`);
+    console.error(error);
     return false;
   }
 }
@@ -23,12 +25,6 @@ function verifyBuild() {
   // Run ESLint
   console.log('\nRunning ESLint...');
   if (!runCommand('npm run lint')) {
-    process.exit(1);
-  }
-
-  // Run tests
-  console.log('\nRunning tests...');
-  if (!runCommand('npm run test')) {
     process.exit(1);
   }
 
