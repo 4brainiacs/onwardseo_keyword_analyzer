@@ -9,18 +9,29 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
+    "prebuild": "rm -rf dist",
+    "build": "tsc --project tsconfig.prod.json && vite build",
+    "preview": "vite preview --host --port 4173",
     "test": "vitest",
-    "lint": "eslint . --ext ts,tsx",
-    "typecheck": "tsc --noEmit"
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint . --ext ts,tsx --report-unused-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "verify": "node scripts/verify-build.js",
+    "postbuild": "node scripts/post-build.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.39.7",
+    "lucide-react": "0.294.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
-    "lucide-react": "0.294.0"
+    "zod": "3.22.4"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "6.1.5",
+    "@testing-library/react": "14.1.2",
+    "@types/node": "20.10.4",
     "@types/react": "18.2.43",
     "@types/react-dom": "18.2.17",
     "@typescript-eslint/eslint-plugin": "6.14.0",
@@ -28,11 +39,13 @@
     "@vitejs/plugin-react": "4.2.1",
     "autoprefixer": "10.4.16",
     "eslint": "8.55.0",
+    "eslint-plugin-react": "7.33.2",
     "eslint-plugin-react-hooks": "4.6.0",
     "eslint-plugin-react-refresh": "0.4.5",
     "postcss": "8.4.32",
     "tailwindcss": "3.3.6",
     "typescript": "5.3.3",
-    "vite": "5.4.11"
+    "vite": "5.4.11",
+    "vitest": "1.0.4"
   }
 }
