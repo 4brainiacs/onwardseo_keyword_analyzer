@@ -4,22 +4,6 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          utils: ['lucide-react']
-        }
-      },
-      external: [
-        '@testing-library/jest-dom',
-        'vitest/globals'
-      ]
-    }
-  },
   server: {
     port: 5173,
     host: true,
@@ -36,6 +20,18 @@ export default defineConfig({
     port: 4173,
     host: true,
     strictPort: true
+  },
+  build: {
+    sourcemap: true,
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          utils: ['lucide-react']
+        }
+      }
+    }
   },
   resolve: {
     alias: {

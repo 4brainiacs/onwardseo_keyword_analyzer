@@ -1,41 +1,33 @@
-```typescript
 import { logger } from '../../utils/logger';
-import { BaseError } from './types';
-
-interface ErrorContext {
-  url?: string;
-  requestId?: string;
-  component?: string;
-  additionalInfo?: Record<string, unknown>;
-}
+import type { ErrorContext } from './types';
 
 export class ErrorReporter {
-  static report(error: Error | BaseError, context?: ErrorContext): void {
-    const errorDetails = {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      ...(error instanceof BaseError && {
-        status: error.status,
-        details: error.details,
-        retryable: error.retryable,
-        retryAfter: error.retryAfter,
-        requestId: error.requestId,
-        context: error.context
-      }),
-      ...context
+  static report(error: Error, context?: ErrorContext): void {
+    const errorContext: ErrorContext = {
+      ...context,
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        cause: error.cause
+      }
     };
 
-    logger.error('Application Error:', errorDetails);
+    // Log to application logger
+    logger.error(error.message, errorContext);
 
-    // Log to console in a format that's easy to find in Netlify logs
+    // Log to console in a format that's easy to find in logs
     console.error('=================== ERROR REPORT ===================');
     console.error('Timestamp:', new Date().toISOString());
-    console.error('Error:', errorDetails);
+    console.error('Error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
     console.error('Context:', context);
     console.error('Environment:', {
-      NODE_ENV: process.env.NODE_ENV,
-      PROD: process.env.NODE_ENV === 'production'
+      NODE_ENV: import.meta.env.MODE,
+      PROD: import.meta.env.PROD
     });
     console.error('===================================================');
   }
@@ -46,9 +38,11 @@ export class ErrorReporter {
     } else {
       this.report(
         new Error(typeof error === 'string' ? error : 'Unknown error'),
-        context
+        {
+          ...context,
+          originalError: error
+        }
       );
     }
   }
 }
-```

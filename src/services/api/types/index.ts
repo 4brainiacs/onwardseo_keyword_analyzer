@@ -27,3 +27,13 @@ export interface RetryConfig {
   baseDelay: number;
   maxDelay: number;
 }
+
+export enum LoadingState {
+  IDLE = 'idle',
+  LOADING = 'loading',
+  SUCCESS = 'success',
+  ERROR = 'error',
+  RETRYING = 'retrying'
+}
+
+export type { ApiResponse as default };
