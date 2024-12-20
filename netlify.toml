@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npm install typescript@5.3.3 && npm install && npm run build"
   publish = "dist"
   functions = "netlify/functions"
 

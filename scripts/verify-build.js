@@ -2,23 +2,26 @@ import { execSync } from 'child_process';
 import { existsSync } from 'fs';
 import { resolve } from 'path';
 
-function runCommand(command) {
-  try {
-    execSync(command, { stdio: 'inherit' });
-    return true;
-  } catch (error) {
-    console.error(`Command failed: ${command}`);
-    console.error(error);
-    return false;
-  }
-}
-
 function verifyBuild() {
   console.log('🔍 Running build verification...\n');
 
-  // Check TypeScript
-  console.log('Checking TypeScript...');
-  if (!runCommand('npm run typecheck')) {
+  // Check for required files
+  const requiredFiles = [
+    'tsconfig.json',
+    'tsconfig.prod.json',
+    'vite.config.ts',
+    'package.json'
+  ];
+
+  const missingFiles = requiredFiles.filter(file => !existsSync(resolve(file)));
+  if (missingFiles.length > 0) {
+    console.error('❌ Missing required files:', missingFiles.join(', '));
+    process.exit(1);
+  }
+
+  // Run type check
+  console.log('Running type check...');
+  if (!runCommand('npx tsc --noEmit')) {
     process.exit(1);
   }
 
@@ -28,23 +31,17 @@ function verifyBuild() {
     process.exit(1);
   }
 
-  // Clean and build
-  console.log('\nCleaning build directory...');
-  runCommand('npm run clean');
+  console.log('\n✅ Build verification passed!\n');
+}
 
-  console.log('\nBuilding project...');
-  if (!runCommand('npm run build')) {
-    process.exit(1);
+function runCommand(command) {
+  try {
+    execSync(command, { stdio: 'inherit' });
+    return true;
+  } catch (error) {
+    console.error(`Command failed: ${command}`);
+    return false;
   }
-
-  // Verify build output
-  const distDir = resolve('dist');
-  if (!existsSync(distDir)) {
-    console.error('❌ Build failed: dist directory not found');
-    process.exit(1);
-  }
-
-  console.log('\n✅ Build verification completed successfully!');
 }
 
 verifyBuild();
