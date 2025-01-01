@@ -1,31 +1,54 @@
-import { AnalysisError } from '../../errors/AnalysisError';
+import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
 import { RequestBuilder } from './RequestBuilder';
 import { ResponseValidator } from './ResponseValidator';
+import { API_CONFIG } from '../config';
 import type { AnalysisResult } from '../../../types';
 
 export class ApiClient {
-  private baseUrl: string;
-  private requestBuilder: RequestBuilder;
-  private responseValidator: ResponseValidator;
-
-  constructor() {
-    this.baseUrl = window.__RUNTIME_CONFIG__?.VITE_API_URL || '/.netlify/functions';
-    this.requestBuilder = new RequestBuilder();
-    this.responseValidator = new ResponseValidator();
-  }
-
   async analyze(url: string): Promise<AnalysisResult> {
-    const messageId = crypto.randomUUID();
-    logger.info('Starting analysis', { url, messageId });
-
     try {
-      const request = this.requestBuilder.buildAnalysisRequest(url, messageId);
-      const response = await fetch(`${this.baseUrl}/analyze`, request);
-      return await this.responseValidator.validateResponse(response);
+      logger.info('Starting analysis request', { url });
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.timeout);
+
+      try {
+        const request = RequestBuilder.build(url);
+        const response = await fetch(request, {
+          signal: controller.signal
+        });
+
+        const result = await ResponseValidator.validate<AnalysisResult>(response);
+        logger.debug('Analysis completed successfully', { url });
+        return result;
+      } finally {
+        clearTimeout(timeoutId);
+      }
     } catch (error) {
-      logger.error('Analysis request failed:', { error, messageId });
-      throw AnalysisError.fromError(error);
+      logger.error('Analysis request failed:', error);
+
+      if (error instanceof AnalysisError) {
+        throw error;
+      }
+
+      if (error.name === 'AbortError') {
+        throw new AnalysisError(
+          'Request timeout',
+          408,
+          'The request took too long to complete',
+          true
+        );
+      }
+
+      throw new AnalysisError(
+        'Request failed',
+        500,
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        true
+      );
     }
   }
 }
+
+export const apiClient = new ApiClient();

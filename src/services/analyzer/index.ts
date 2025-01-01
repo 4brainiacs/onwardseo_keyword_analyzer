@@ -1,4 +1,4 @@
-import { ContentAnalyzer } from './ContentAnalyzer';
+import { ContentAnalyzer } from './analyzers/ContentAnalyzer';
 import { KeywordAnalyzer } from './analyzers/KeywordAnalyzer';
 import { HeadingAnalyzer } from './analyzers/HeadingAnalyzer';
 import { MetadataAnalyzer } from './analyzers/MetadataAnalyzer';

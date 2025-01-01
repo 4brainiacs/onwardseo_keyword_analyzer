@@ -23,15 +23,7 @@ export default defineConfig({
   },
   build: {
     sourcemap: true,
-    outDir: 'dist',
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          utils: ['lucide-react']
-        }
-      }
-    }
+    outDir: 'dist'
   },
   resolve: {
     alias: {

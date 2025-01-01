@@ -2,17 +2,22 @@ import { AnalysisError } from '../../errors';
 import { logger } from '../../../utils/logger';
 
 export class ContentTypeValidator {
-  static async validate(response: Response): Promise<void> {
-    const contentType = response.headers.get('content-type');
+  static validate(response: Response): void {
+    const contentType = response.headers.get('content-type')?.toLowerCase();
     
-    if (!contentType?.includes('application/json')) {
-      const text = await response.text();
-      logger.error('Invalid content type received:', {
-        contentType,
-        status: response.status,
-        responsePreview: text.slice(0, 200)
-      });
+    if (!contentType) {
+      logger.error('Missing content type header');
+      throw new AnalysisError(
+        'Missing content type',
+        415,
+        'Response is missing content type header',
+        false
+      );
+    }
 
+    // Allow both application/json and application/json; charset=utf-8
+    if (!contentType.includes('application/json')) {
+      logger.error('Invalid content type:', { contentType });
       throw new AnalysisError(
         'Invalid content type',
         415,

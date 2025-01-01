@@ -1,68 +1,94 @@
-import { AnalysisError } from '../errors/AnalysisError';
+import { AnalysisError } from '../errors';
 import { logger } from '../../utils/logger';
-import { MessageHandler } from '../messaging/MessageHandler';
-import { handleApiError } from './errorHandler';
+import { API_CONFIG } from '../../config/api';
 import type { AnalysisResult } from '../../types';
 
 class ApiClient {
-  private baseUrl: string;
+  private readonly baseUrl: string;
+  private readonly controller: AbortController;
 
   constructor() {
-    this.baseUrl = window.__RUNTIME_CONFIG__?.VITE_API_URL || '/.netlify/functions';
+    this.baseUrl = API_CONFIG.baseUrl;
+    this.controller = new AbortController();
   }
 
   async analyze(url: string): Promise<AnalysisResult> {
-    const messageId = crypto.randomUUID();
+    try {
+      logger.info('Starting analysis request', { url });
 
-    return MessageHandler.handleMessage(async () => {
+      const timeoutId = setTimeout(() => this.controller.abort(), API_CONFIG.timeout);
+
       try {
-        logger.info('Starting analysis', { url, messageId });
-
         const response = await fetch(`${this.baseUrl}/analyze`, {
           method: 'POST',
+          signal: this.controller.signal,
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Request-ID': messageId
+            'Accept': 'application/json'
           },
           body: JSON.stringify({ url })
         });
 
+        const text = await response.text();
+        let data;
+        
+        try {
+          data = JSON.parse(text);
+        } catch (error) {
+          throw new AnalysisError(
+            'Invalid response format',
+            500,
+            'Server returned invalid JSON',
+            true
+          );
+        }
+
         if (!response.ok) {
           throw new AnalysisError(
-            'Request failed',
+            data.error || 'Request failed',
             response.status,
-            `Server returned status ${response.status}`,
-            response.status >= 500
+            data.details || `Server returned status ${response.status}`,
+            response.status >= 500,
+            data.retryAfter
           );
         }
 
-        const contentType = response.headers.get('content-type');
-        if (!contentType?.includes('application/json')) {
-          throw new AnalysisError(
-            'Invalid content type',
-            415,
-            `Expected JSON but received: ${contentType}`,
-            false
-          );
-        }
-
-        const data = await response.json();
-        
         if (!data.success || !data.data) {
           throw new AnalysisError(
-            data.error || 'Invalid response format',
+            'Invalid response format',
             500,
-            data.details || 'Server returned unsuccessful response',
+            'Server returned unsuccessful response',
             true
           );
         }
 
         return data.data;
-      } catch (error) {
-        throw handleApiError(error);
+      } finally {
+        clearTimeout(timeoutId);
       }
-    }, messageId);
+    } catch (error) {
+      logger.error('Request failed:', error);
+
+      if (error instanceof AnalysisError) {
+        throw error;
+      }
+
+      if (error.name === 'AbortError') {
+        throw new AnalysisError(
+          'Request timeout',
+          408,
+          'The request took too long to complete',
+          true
+        );
+      }
+
+      throw new AnalysisError(
+        'Request failed',
+        500,
+        error instanceof Error ? error.message : 'An unexpected error occurred',
+        true
+      );
+    }
   }
 }
 

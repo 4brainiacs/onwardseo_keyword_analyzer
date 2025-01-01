@@ -1,13 +1,16 @@
+import { API_CONFIG } from '../config';
+import { logger } from '../../../utils/logger';
+
 export class RequestBuilder {
-  buildAnalysisRequest(url: string, messageId: string): RequestInit {
-    return {
+  static build(url: string): Request {
+    const endpoint = `${API_CONFIG.baseUrl}/analyze`;
+    
+    logger.debug('Building request:', { endpoint, url });
+    
+    return new Request(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Request-ID': messageId
-      },
+      headers: API_CONFIG.headers,
       body: JSON.stringify({ url })
-    };
+    });
   }
 }
